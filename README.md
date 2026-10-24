@@ -20,6 +20,10 @@ acceptance criterion, `Part of those-who-run/paddock#N` otherwise
 - `make check`, the same checks as CI ([`AGENTS.md`](AGENTS.md)), and
   [`.golangci.yml`](.golangci.yml). golangci-lint and govulncheck are pinned in
   [`tools/go.mod`](tools/go.mod) and run with `go tool -modfile=tools/go.mod`.
+- Commit hooks for Go (gofmt, `go mod tidy` and golangci-lint) beside the
+  language-neutral ones, and [`docs/dependencies.md`](docs/dependencies.md),
+  which has a row for each direct dependency in `go.mod`, held to it by
+  [`internal/dependencies`](internal/dependencies/dependencies_test.go).
 - CI ([`.github/workflows/ci.yml`](.github/workflows/ci.yml)): `test`
   (`make test`), `checks / checks` and `go / check`, from the reusable workflows in
   `those-who-run/.github`, pinned by commit SHA.
@@ -121,6 +125,11 @@ questions and what stays out of a new repository.
   bump among them, reaches the template with nothing to copy by hand.
   `README.md.jinja` is a README of its own; `cmd/[[name]]/` renders as
   `cmd/<name>/`.
+- [`docs/dependencies.md`](docs/dependencies.md) is copied as it is, with
+  chassis's empty table, and from then on holds the repository's own rows.
+  `copier update` merges the template's later changes into it three ways, as it
+  does for `go.mod`, so a row chassis adds arrives with the `require` it
+  explains, and the repository's own rows stay.
 - copier's delimiters are `[[ ]]` and `[% %]`, not `{{ }}` and `{% %}`, so the
   GitHub Actions expressions in the workflows stay as they are.
 - `release.yml` here never publishes: its jobs run only outside
