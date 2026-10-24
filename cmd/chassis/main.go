@@ -19,9 +19,9 @@ import (
 // version is what -version prints and GET /healthz reports: "dev" unless the build
 // sets it with -ldflags "-X main.version=X.Y.Z". The Dockerfile does that from its
 // VERSION build argument, which is "dev" unless the build passes one
-// (docker build --build-arg VERSION=X.Y.Z); image.yml in those-who-run/.github at
-// v0.2.2, the version the workflows pin, passes none yet, so the images it builds
-// report "dev".
+// (docker build --build-arg VERSION=X.Y.Z). image.yml in those-who-run/.github
+// passes VERSION=X.Y.Z when it builds on a release tag vX.Y.Z, so a released image
+// reports its version; a pull request's image build passes none, and reports "dev".
 var version = "dev"
 
 func main() {

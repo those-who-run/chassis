@@ -18,9 +18,9 @@ RUN go mod download
 COPY . .
 # The version the binary reports (`-version`, GET /healthz): `dev` unless the build
 # passes one, as `docker build --build-arg VERSION=X.Y.Z .` does. image.yml in
-# those-who-run/.github, at the v0.2.2 the workflows here pin, passes no build
-# arguments yet, so the images it builds report `dev`; a release's image carries
-# its version in the org.opencontainers.image.version label.
+# those-who-run/.github passes VERSION=X.Y.Z when it builds on a release tag vX.Y.Z,
+# so a released image reports its version, as its org.opencontainers.image.version
+# label does; a pull request's image build passes none, and reports `dev`.
 ARG VERSION=dev
 # -trimpath keeps the build machine's paths out of the binary.
 RUN CGO_ENABLED=0 go build -trimpath -ldflags="-s -w -X main.version=${VERSION}" -o /out/service ./cmd/chassis
