@@ -23,7 +23,7 @@ jobs:
   image:
     permissions:
       contents: read
-    uses: those-who-run/.github/.github/workflows/image.yml@18c81ef0f98be250934b203f6559aa7f249382a6 # v0.2.2
+    uses: those-who-run/.github/.github/workflows/image.yml@ae843c41eff857de755259da2d2d70cf5ec86dc5 # v0.2.3
     with:
       smoke: |
         docker run --rm "$IMAGE" -version
