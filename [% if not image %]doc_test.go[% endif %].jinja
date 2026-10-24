@@ -1,0 +1,15 @@
+[# The test of a library's starting package, rendered only without an image
+   (copier.yml). #]
+[%- set package = name | replace("-", "") -%]
+package [[ package ]]_test
+
+import (
+	"fmt"
+
+	"github.com/those-who-run/[[ name ]]"
+)
+
+func ExampleName() {
+	fmt.Println([[ package ]].Name())
+	// Output: [[ name ]]
+}

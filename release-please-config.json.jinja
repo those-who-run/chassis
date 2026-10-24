@@ -1,0 +1,2 @@
+[# chassis's own release-please-config.json, with the repository's name for chassis's (copier.yml). #]
+[%- filter replace("chassis", name) %][% include "release-please-config.json" %][% endfilter -%]
