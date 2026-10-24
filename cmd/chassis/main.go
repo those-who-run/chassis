@@ -15,8 +15,11 @@ import (
 	"github.com/those-who-run/chassis/internal/service"
 )
 
-// version is the build's version, set with -ldflags "-X main.version=X.Y.Z"; a
-// published image also carries it in its org.opencontainers.image.version label.
+// version is what -version prints and GET /healthz reports: "dev" unless the build
+// sets it with -ldflags "-X main.version=X.Y.Z". The Dockerfile does that from its
+// VERSION build argument, which is "dev" unless the build passes one
+// (docker build --build-arg VERSION=X.Y.Z); image.yml in those-who-run/.github at
+// v0.2.1 passes none yet, so the images it builds report "dev".
 var version = "dev"
 
 func main() {

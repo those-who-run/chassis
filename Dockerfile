@@ -16,8 +16,14 @@ WORKDIR /src
 COPY go.mod go.sum* ./
 RUN go mod download
 COPY . .
+# The version the binary reports (`-version`, GET /healthz): `dev` unless the build
+# passes one, as `docker build --build-arg VERSION=X.Y.Z .` does. image.yml in
+# those-who-run/.github, at the v0.2.1 the workflows here pin, passes no build
+# arguments yet, so the images it builds report `dev`; a release's image carries
+# its version in the org.opencontainers.image.version label.
+ARG VERSION=dev
 # -trimpath keeps the build machine's paths out of the binary.
-RUN CGO_ENABLED=0 go build -trimpath -ldflags="-s -w" -o /out/service ./cmd/chassis
+RUN CGO_ENABLED=0 go build -trimpath -ldflags="-s -w -X main.version=${VERSION}" -o /out/service ./cmd/chassis
 
 FROM gcr.io/distroless/static-debian13:nonroot@sha256:18f4cc26c9ffa7f20a359298be7deadac5c607c8e03a02b8119f1a5fc2f82c99
 COPY --from=build /out/service /service
