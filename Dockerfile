@@ -18,7 +18,7 @@ RUN go mod download
 COPY . .
 # The version the binary reports (`-version`, GET /healthz): `dev` unless the build
 # passes one, as `docker build --build-arg VERSION=X.Y.Z .` does. image.yml in
-# those-who-run/.github, at the v0.2.1 the workflows here pin, passes no build
+# those-who-run/.github, at the v0.2.2 the workflows here pin, passes no build
 # arguments yet, so the images it builds report `dev`; a release's image carries
 # its version in the org.opencontainers.image.version label.
 ARG VERSION=dev

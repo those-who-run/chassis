@@ -19,7 +19,7 @@ jobs:
     if: github.repository != 'those-who-run/chassis'
     permissions:
       contents: read
-    uses: those-who-run/.github/.github/workflows/image.yml@3f878d3f5b7356e3db46dafc977b2046b44f24b3 # v0.2.1
+    uses: those-who-run/.github/.github/workflows/image.yml@18c81ef0f98be250934b203f6559aa7f249382a6 # v0.2.2
     with:
       smoke: docker run --rm "$IMAGE" -version
   publish:
@@ -29,7 +29,7 @@ jobs:
       packages: write
       id-token: write
       attestations: write
-    uses: those-who-run/.github/.github/workflows/image-publish.yml@3f878d3f5b7356e3db46dafc977b2046b44f24b3 # v0.2.1
+    uses: those-who-run/.github/.github/workflows/image-publish.yml@18c81ef0f98be250934b203f6559aa7f249382a6 # v0.2.2
     with:
       digest: ${{ needs.image.outputs.digest }}
       artifact: ${{ needs.image.outputs.artifact }}
