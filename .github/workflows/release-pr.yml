@@ -38,6 +38,9 @@ jobs:
     permissions:
       contents: read
       pull-requests: write
+      # For the release dispatch. A repository with no release workflow keeps it
+      # too: GitHub refuses to start a reusable workflow whose jobs ask for more
+      # than the caller grants, whether or not those jobs would run.
       actions: write
     uses: those-who-run/.github/.github/workflows/release-please.yml@3f878d3f5b7356e3db46dafc977b2046b44f24b3 # v0.2.1
     with:

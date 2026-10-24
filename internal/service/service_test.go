@@ -103,9 +103,9 @@ func TestConfigFromEnvRefusesAnUnknownLevel(t *testing.T) {
 
 func TestNewLoggerWritesJSONFromItsLevel(t *testing.T) {
 	var buf bytes.Buffer
-	log := NewLogger(&buf, slog.LevelWarn)
-	log.Info("dropped")
-	log.Warn("kept", "lap", 3)
+	logger := NewLogger(&buf, slog.LevelWarn)
+	logger.Info("dropped")
+	logger.Warn("kept", "lap", 3)
 
 	lines := strings.Split(strings.TrimSpace(buf.String()), "\n")
 	if len(lines) != 1 {
@@ -217,6 +217,26 @@ func TestRunListensOnTheConfiguredAddress(t *testing.T) {
 		}
 	case <-time.After(10 * time.Second):
 		t.Fatal("Run still serving 10 s after cancel")
+	}
+}
+
+func TestTheServerCutsOffSlowAndIdleClients(t *testing.T) {
+	srv := newServer(http.NotFoundHandler(), NewLogger(io.Discard, slog.LevelInfo))
+	for _, c := range []struct {
+		name      string
+		got, want time.Duration
+	}{
+		{"ReadHeaderTimeout", srv.ReadHeaderTimeout, 5 * time.Second},
+		{"ReadTimeout", srv.ReadTimeout, 10 * time.Second},
+		{"WriteTimeout", srv.WriteTimeout, 10 * time.Second},
+		{"IdleTimeout", srv.IdleTimeout, 60 * time.Second},
+	} {
+		if c.got != c.want {
+			t.Errorf("%s = %v, want %v", c.name, c.got, c.want)
+		}
+	}
+	if srv.ErrorLog == nil {
+		t.Error("the server's own errors are not logged")
 	}
 }
 

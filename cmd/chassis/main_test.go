@@ -63,6 +63,20 @@ func TestVersion(t *testing.T) {
 	}
 }
 
+func TestHelpIsNotAnError(t *testing.T) {
+	for _, arg := range []string{"-h", "-help"} {
+		t.Run(arg, func(t *testing.T) {
+			var stderr bytes.Buffer
+			if code := run(t.Context(), []string{arg}, env(nil), &bytes.Buffer{}, &stderr); code != 0 {
+				t.Errorf("exit %d, want 0", code)
+			}
+			if !strings.Contains(stderr.String(), "-version") {
+				t.Errorf("stderr %q has no usage", stderr.String())
+			}
+		})
+	}
+}
+
 func TestAnUnknownFlagIsAUsageError(t *testing.T) {
 	var stderr bytes.Buffer
 	if code := run(t.Context(), []string{"-nope"}, env(nil), &bytes.Buffer{}, &stderr); code != 2 {

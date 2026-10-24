@@ -211,6 +211,12 @@ class RenderedWithoutAnImage(Rendered):
     def test_no_release_workflow_is_dispatched(self):
         self.assertIn('release-workflow: ""', self.rendered(RELEASE_PR))
 
+    def test_release_please_still_gets_what_its_jobs_ask_for(self):
+        # GitHub refuses to start a reusable workflow whose jobs ask for more than
+        # the caller grants, even jobs that would be skipped, so the dispatch's
+        # permission stays with no release workflow to dispatch.
+        self.assertIn("      actions: write\n", self.rendered(RELEASE_PR))
+
 
 class ChassisReleaseHistoryStaysInChassis(unittest.TestCase):
     """Once chassis has released, its version and changelog are still its own: a

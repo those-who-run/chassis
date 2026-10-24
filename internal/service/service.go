@@ -62,34 +62,55 @@ func Handler(version string) http.Handler {
 // shutdownGrace is how long Run lets requests in flight finish once ctx is done.
 const shutdownGrace = 10 * time.Second
 
+// The server's limits, for a small JSON service whose requests are short: a client
+// that is slow to send its headers or its whole request, or slow to read the
+// response, is cut off rather than holding a connection, and an idle keep-alive
+// connection is closed after a minute. A component with long requests or
+// streaming responses raises them.
+const (
+	readHeaderTimeout = 5 * time.Second
+	readTimeout       = 10 * time.Second
+	writeTimeout      = 10 * time.Second
+	idleTimeout       = 60 * time.Second
+)
+
 // Run listens on cfg.Addr and serves Handler until ctx is done, then shuts the
 // server down gracefully. It returns nil after a clean shutdown, or why it could
 // not listen or serve.
-func Run(ctx context.Context, cfg Config, log *slog.Logger, version string) error {
+func Run(ctx context.Context, cfg Config, logger *slog.Logger, version string) error {
 	var lc net.ListenConfig
 	ln, err := lc.Listen(ctx, "tcp", cfg.Addr)
 	if err != nil {
 		return fmt.Errorf("listen: %w", err)
 	}
-	return serve(ctx, ln, log, version)
+	return serve(ctx, ln, logger, version)
 }
 
-func serve(ctx context.Context, ln net.Listener, log *slog.Logger, version string) error {
-	srv := &http.Server{
-		Handler:           Handler(version),
-		ReadHeaderTimeout: 5 * time.Second,
-		ErrorLog:          slog.NewLogLogger(log.Handler(), slog.LevelError),
+// newServer is the HTTP server for h, with the limits above, logging its own errors
+// through logger.
+func newServer(h http.Handler, logger *slog.Logger) *http.Server {
+	return &http.Server{
+		Handler:           h,
+		ReadHeaderTimeout: readHeaderTimeout,
+		ReadTimeout:       readTimeout,
+		WriteTimeout:      writeTimeout,
+		IdleTimeout:       idleTimeout,
+		ErrorLog:          slog.NewLogLogger(logger.Handler(), slog.LevelError),
 	}
+}
+
+func serve(ctx context.Context, ln net.Listener, logger *slog.Logger, version string) error {
+	srv := newServer(Handler(version), logger)
 	served := make(chan error, 1)
 	go func() { served <- srv.Serve(ln) }()
-	log.InfoContext(ctx, "serving", "addr", ln.Addr().String(), "version", version)
+	logger.InfoContext(ctx, "serving", "addr", ln.Addr().String(), "version", version)
 
 	select {
 	case err := <-served:
 		return fmt.Errorf("serve: %w", err)
 	case <-ctx.Done():
 	}
-	log.InfoContext(ctx, "shutting down")
+	logger.InfoContext(ctx, "shutting down")
 	// ctx is already done, so the grace period needs a context of its own.
 	shutdown, cancel := context.WithTimeout(context.WithoutCancel(ctx), shutdownGrace)
 	defer cancel()

@@ -5,6 +5,7 @@ package main
 
 import (
 	"context"
+	"errors"
 	"flag"
 	"fmt"
 	"io"
@@ -28,8 +29,8 @@ func main() {
 
 // run is main without the process around it, so the tests can call it. It serves
 // until ctx is done or the process gets SIGINT or SIGTERM, and returns the exit
-// code: 0 after a clean shutdown, 1 when the service fails, 2 for a bad flag or
-// configuration.
+// code: 0 after a clean shutdown or for -h, 1 when the service fails, 2 for a bad
+// flag or configuration.
 func run(ctx context.Context, args []string, getenv func(string) string, stdout, stderr io.Writer) int {
 	ctx, stop := signal.NotifyContext(ctx, os.Interrupt, syscall.SIGTERM)
 	defer stop()
@@ -37,6 +38,10 @@ func run(ctx context.Context, args []string, getenv func(string) string, stdout,
 	flags.SetOutput(stderr)
 	showVersion := flags.Bool("version", false, "print the version and exit")
 	if err := flags.Parse(args); err != nil {
+		// -h and -help print the usage, which is what was asked for.
+		if errors.Is(err, flag.ErrHelp) {
+			return 0
+		}
 		return 2
 	}
 	if *showVersion {
@@ -48,9 +53,9 @@ func run(ctx context.Context, args []string, getenv func(string) string, stdout,
 		_, _ = fmt.Fprintln(stderr, err)
 		return 2
 	}
-	log := service.NewLogger(stdout, cfg.LogLevel)
-	if err := service.Run(ctx, cfg, log, version); err != nil {
-		log.ErrorContext(ctx, "stopped", "err", err)
+	logger := service.NewLogger(stdout, cfg.LogLevel)
+	if err := service.Run(ctx, cfg, logger, version); err != nil {
+		logger.ErrorContext(ctx, "stopped", "err", err)
 		return 1
 	}
 	return 0

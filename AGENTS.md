@@ -23,8 +23,8 @@ and `Part of those-who-run/paddock#N` otherwise, as paddock's `AGENTS.md` says.
 - the Go checks, in the order go.yml in `those-who-run/.github` runs them (CI's
   `go / check`): gofmt, `go mod tidy` for the module and `tools/go.mod`, go vet,
   golangci-lint with [`.golangci.yml`](.golangci.yml), the tests with the race
-  detector (a skipped test fails, and so does total coverage below 90 %), go
-  build and govulncheck;
+  detector (a skipped test fails, and so does total coverage below the floor,
+  `COVERAGE_FLOOR` in the [`Makefile`](Makefile)), go build and govulncheck;
 - the repository's own checks (with the Go tests, CI's `test`): every internal
   Markdown link and anchor resolves, the guard and settings in `.claude/` are
   `those-who-run/.github`'s `agent/` at the commit CI pins, and the tests in
