@@ -54,9 +54,10 @@ hooks:
 fmt:
 	gofmt -w $(GO_FILES)
 
+# A gofmt that is missing or can't read a file fails, rather than listing nothing.
 .PHONY: fmt-check
 fmt-check:
-	@unformatted=$$(gofmt -l $(GO_FILES)); \
+	@unformatted=$$(gofmt -l $(GO_FILES)) || exit 1; \
 	if [ -n "$$unformatted" ]; then echo "not formatted (make fmt):" $$unformatted >&2; exit 1; fi
 
 # Neither the module nor the tools module may need `go mod tidy`.
