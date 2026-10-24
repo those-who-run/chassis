@@ -65,7 +65,8 @@ and a recording that pins a behaviour where one applies.
 - **Generated files.** There are none yet. One that is added is written by a
   `make` target or a `//go:generate` line, starts with Go's
   `// Code generated … DO NOT EDIT.` line, is committed, and is never edited by
-  hand: change its source and generate it again.
+  hand: change its source and generate it again. That line also leaves the
+  file out of the coverage floor, in `make check` and in CI.
 - **Dependencies.** Declared in `go.mod` and locked in `go.sum`, both
   committed and tidy (`go mod tidy`; the commit hooks and CI check it). No
   `vendor/` directory. Each direct `require` has a row in
