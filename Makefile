@@ -75,16 +75,15 @@ lint:
 	$(GO_TOOL) $(GOLANGCI_LINT) run ./...
 
 # The race detector (which needs cgo, whatever the build uses) in shuffled order. A
-# skipped test fails, as in go.yml, and so does total coverage below the floor.
+# skipped test fails, as in go.yml, and so does total coverage below the floor;
+# scripts/go_coverage.py totals it, leaving out generated files as go.yml does.
 .PHONY: go-test
 go-test:
 	@mkdir -p $(BUILD)
 	CGO_ENABLED=1 go test -race -shuffle=on -covermode=atomic -coverprofile=$(BUILD)/cover.out -v ./... > $(BUILD)/test.log 2>&1; \
 	  status=$$?; grep -v -E '^(=== |\s+--- PASS|--- PASS)' $(BUILD)/test.log; exit $$status
 	@if grep -E '^\s*--- SKIP' $(BUILD)/test.log; then echo "a skipped test fails: fix it or remove it" >&2; exit 1; fi
-	@go tool cover -func=$(BUILD)/cover.out | awk -v floor=$(COVERAGE_FLOOR) \
-	  '/^total:/ { sub("%", "", $$3); printf "Coverage: %.1f%% of statements (the floor is %s%%).\n", $$3, floor; \
-	  if ($$3 + 0 < floor + 0) { print "coverage is below the floor" > "/dev/stderr"; exit 1 } }'
+	@$(PY) scripts/go_coverage.py $(BUILD)/cover.out $(COVERAGE_FLOOR)
 
 .PHONY: build
 build:
