@@ -47,10 +47,13 @@ jobs:
   # The commit hooks on every file, gitleaks over the PR's commits, the PR title and
   # dependency review. No `if:` or `needs:`, so the required check always reports.
   # The guard copy check reads this pin, so bump the copies in .claude/ with it.
+  # The Go hooks (gofmt, go mod tidy, golangci-lint) need Go, installed from go.mod.
   checks:
     permissions:
       contents: read
     uses: those-who-run/.github/.github/workflows/checks.yml@3f878d3f5b7356e3db46dafc977b2046b44f24b3 # v0.2.1
+    with:
+      go-version-file: go.mod
 
   # gofmt, go mod tidy, go vet, golangci-lint, the tests with the race detector and
   # the coverage floor, go build and govulncheck, as `make check` runs them, behind

@@ -35,12 +35,46 @@ command fetches when `GOTOOLCHAIN` allows it), `python3`, `pre-commit` and the
 network. CI's `image / build`, where the repository ships an image, also builds
 the Dockerfile and smoke-tests the image; `make check` doesn't.
 
-A change also carries a test for each acceptance criterion of its issue,
-docs changed in the same PR as what they describe, and a recording that
-pins a behaviour where one applies.
+A change also carries a test for each acceptance criterion of its issue
+([Go](#go) says where), docs changed in the same PR as what they describe,
+and a recording that pins a behaviour where one applies.
 
-This file's rules for Go (tool versions, formatting, generated files, where
-dependencies are declared and locked) arrive with those-who-run/paddock#22.
+## Go
+
+- **Packages.** Anything not meant to be imported by another module lives
+  under `internal/`, which the `go` command keeps other modules from
+  importing. A package outside `internal/` is an API other repositories may
+  build against.
+- **Tests.** Each acceptance criterion has a test in a `_test.go` file named
+  for what it checks, beside the code it tests, such as
+  [`internal/dependencies`](internal/dependencies/dependencies_test.go) for the dependency table.
+  Fixtures go under `testdata/`, which the `go` command skips.
+- **Tool versions.** The Go version is `go.mod`'s `go` and `toolchain`
+  lines. golangci-lint and govulncheck are pinned in
+  [`tools/go.mod`](tools/go.mod), checksummed in `tools/go.sum`, and run with
+  `go tool -modfile=tools/go.mod`, as the Makefile does; never a copy
+  installed some other way. Renovate bumps them; a new tool is added there
+  the way `those-who-run/.github`'s
+  [workflows README](https://github.com/those-who-run/.github/blob/main/.github/workflows/README.md#toolsgomod)
+  says.
+- **Formatting and linting.** gofmt (`make fmt`) and golangci-lint with
+  [`.golangci.yml`](.golangci.yml) (`make lint`). The commit hooks, `make
+  check` and CI's `go / check` all refuse unformatted code and lint findings.
+  A finding is fixed, or silenced at its line with
+  `//nolint:<linter> // <why>`.
+- **Generated files.** There are none yet. One that is added is written by a
+  `make` target or a `//go:generate` line, starts with Go's
+  `// Code generated … DO NOT EDIT.` line, is committed, and is never edited by
+  hand: change its source and generate it again.
+- **Dependencies.** Declared in `go.mod` and locked in `go.sum`, both
+  committed and tidy (`go mod tidy`; the commit hooks and CI check it). No
+  `vendor/` directory. Each direct `require` has a row in
+  [`docs/dependencies.md`](docs/dependencies.md) saying why it is there, added
+  in the same PR; `internal/dependencies` fails `make check` without it.
+- **Contracts.** The contracts module, and any other module of the project,
+  is required at a released tag (`vX.Y.Z`), never at a pseudo-version from a
+  branch or an untagged commit, and never through a `replace` to a local path
+  or a fork.
 
 ## Make targets
 
