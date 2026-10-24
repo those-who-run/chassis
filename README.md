@@ -79,8 +79,15 @@ The maintainer's steps; agents never create repositories or change settings.
    ```
 
    It asks for the name, the README's title and first paragraph, and whether the
-   repository ships an image. Over a foundation repository, only `README.md` and
-   `AGENTS.md` differ besides the new files; copier asks before overwriting each.
+   repository ships an image. Over a foundation repository, the files it shares
+   with chassis take chassis's Go versions, and copier asks before overwriting
+   each: the README gets the template's sections, `AGENTS.md`, the `Makefile`,
+   `ci.yml` and `.pre-commit-config.yaml` the Go checks and rules, and
+   `.gitignore`, `scripts/docs_links.py` and its test skip `build/`, where
+   `make` writes. Over `salsa`'s `main` as a library, those eight files change
+   (`.github/workflows/ci.yml`, `.gitignore`, `.pre-commit-config.yaml`,
+   `AGENTS.md`, `Makefile`, `README.md`, `scripts/docs_links.py` and
+   `tests/test_docs_links.py`); the rest is new. Review each before committing.
    `.copier-answers.yml` records the tag and the answers: commit it.
 5. `make check`, then a PR. Its CI runs `test`, `checks / checks`, `go / check`
    and, with an image, `image / build`.
