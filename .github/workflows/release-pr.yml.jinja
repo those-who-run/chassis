@@ -1,0 +1,4 @@
+[# chassis's own release-pr.yml; a repository without an image has no release
+   workflow to dispatch (copier.yml). #]
+[%- set workflow %][% include ".github/workflows/release-pr.yml" %][% endset -%]
+[[ workflow if image else workflow | replace("release-workflow: release.yml", 'release-workflow: ""') -]]

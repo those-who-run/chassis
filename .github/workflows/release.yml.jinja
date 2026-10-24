@@ -1,0 +1,3 @@
+[# chassis's own release.yml, without the condition that keeps chassis from
+   publishing (copier.yml). #]
+[%- filter replace("    # chassis is the template, not a component: it never publishes an image.\n    if: github.repository != 'those-who-run/chassis'\n", "") %][% include ".github/workflows/release.yml" %][% endfilter -%]

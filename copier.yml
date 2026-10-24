@@ -1,0 +1,74 @@
+# chassis as a copier template: README.md says how to make a repository from it,
+# and how the template is laid out.
+#
+# The repository is its own rendered project, for the name `chassis`. A file that
+# needs a repository's own values has a sibling with the `.jinja` suffix, which
+# copier renders in its place; most of those include chassis's own file and replace
+# the name, so a change to the file (a Renovate bump among them) reaches the
+# template with nothing to copy by hand. tests/test_template.py renders the
+# template and runs the result's checks.
+_min_copier_version: "9.19.1"
+_templates_suffix: .jinja
+_answers_file: .copier-answers.yml
+
+# `[[ ]]` and `[% %]` rather than Jinja's `{{ }}` and `{% %}`, so the GitHub
+# Actions expressions (`${{ }}`) in the workflows a template includes stay as they
+# are.
+_envops:
+  block_start_string: "[%"
+  block_end_string: "%]"
+  variable_start_string: "[["
+  variable_end_string: "]]"
+  comment_start_string: "[#"
+  comment_end_string: "#]"
+  keep_trailing_newline: true
+
+# What stays in chassis: this file, the template's own test and what it installs,
+# its own example command when the repository has another name, and, for a
+# repository without an image, the image's files. Copier's defaults are kept
+# (setting _exclude replaces them). The plain README.md stays out on its own:
+# README.md.jinja is its sibling.
+_exclude:
+  - copier.yml
+  - "~*"
+  - "*.py[co]"
+  - __pycache__
+  - .git
+  - .DS_Store
+  - /.github/requirements-copier.txt
+  - /tests/test_template.py
+  - "[% if name != 'chassis' %]/cmd/chassis/[% endif %]"
+  - "[% if not image %]/Dockerfile[% endif %]"
+  - "[% if not image %]/.dockerignore[% endif %]"
+  - "[% if not image %]/.github/workflows/image.yml[% endif %]"
+  - "[% if not image %]/.github/workflows/release.yml[% endif %]"
+
+_message_after_copy: |
+  [[ name ]] is ready. Next: README.md, "Making a repository from this template",
+  in chassis.
+
+name:
+  type: str
+  help: The repository's name under those-who-run, such as `salsa` (lower case, digits and hyphens)
+  validator: >-
+    [% if not (name | regex_search('^[a-z][a-z0-9-]*[a-z0-9]$')) %]
+    Lower-case letters, digits and hyphens, starting with a letter
+    [% endif %]
+
+title:
+  type: str
+  help: The README's title
+  default: "[[ name | capitalize ]]"
+
+description:
+  type: str
+  multiline: true
+  help: What the component is, for the README's first paragraph (Markdown, wrapped as you like)
+  validator: "[% if not description.strip() %]Say what the component is[% endif %]"
+
+image:
+  type: bool
+  help: >-
+    Does it ship a container image? No for a library (salsa, contracts): the
+    Dockerfile, the image check and the release workflow are left out
+  default: true

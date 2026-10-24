@@ -1,0 +1,2 @@
+[# chassis's own tools/go.mod, with the repository's name for chassis's (copier.yml). #]
+[%- filter replace("chassis", name) %][% include "tools/go.mod" %][% endfilter -%]

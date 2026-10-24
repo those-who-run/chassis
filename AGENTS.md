@@ -17,28 +17,41 @@ and `Part of those-who-run/paddock#N` otherwise, as paddock's `AGENTS.md` says.
 
 ## Definition of done
 
-`make check` passes. It runs what CI runs: the commit hooks on every file
-(CI's `checks / checks`) and `make test` (CI's `test`): every internal Markdown
-link and anchor resolves, the guard and settings in `.claude/` are
-`those-who-run/.github`'s `agent/` at the commit CI pins, the external commit
-hooks are pinned by commit SHA, and the tests of those checks. It needs
-`python3`, `pre-commit` and the network.
+`make check` passes. It runs what CI runs, in three parts:
+
+- the commit hooks on every file (CI's `checks / checks`);
+- the Go checks, in the order go.yml in `those-who-run/.github` runs them (CI's
+  `go / check`): gofmt, `go mod tidy` for the module and `tools/go.mod`, go vet,
+  golangci-lint with [`.golangci.yml`](.golangci.yml), the tests with the race
+  detector (a skipped test fails, and so does total coverage below 90 %), go
+  build and govulncheck;
+- the repository's own checks (with the Go tests, CI's `test`): every internal
+  Markdown link and anchor resolves, the guard and settings in `.claude/` are
+  `those-who-run/.github`'s `agent/` at the commit CI pins, and the tests in
+  `tests/`.
+
+It needs Go (the version in `go.mod`'s `toolchain` line, which the `go`
+command fetches when `GOTOOLCHAIN` allows it), `python3`, `pre-commit` and the
+network. CI's `image / build`, where the repository ships an image, also builds
+the Dockerfile and smoke-tests the image; `make check` doesn't.
 
 A change also carries a test for each acceptance criterion of its issue,
 docs changed in the same PR as what they describe, and a recording that
 pins a behaviour where one applies.
 
-It holds no language code yet. The template, and this file's rules for
-its language (tool versions, formatting, generated files, where
-dependencies are declared and locked), arrive with
-those-who-run/paddock#21 and #22.
+This file's rules for Go (tool versions, formatting, generated files, where
+dependencies are declared and locked) arrive with those-who-run/paddock#22.
 
 ## Make targets
 
 - `make check`: everything a PR must pass, as CI runs it.
-- `make test`: the repository's own checks, CI's `test` job, while iterating.
+- `make test`: the Go tests with the coverage floor, and the repository's own
+  checks: CI's `test` job, while iterating.
+- `make fmt`: formats the Go code; `make lint`: golangci-lint.
 - `make hooks`: installs the commit hooks. A new clone or worktree runs it
   once, so the hooks run on every commit and commit message.
+
+`make help` lists the rest, among them each Go check on its own.
 
 ## The guard
 

@@ -1,0 +1,2 @@
+[# chassis's own Dockerfile, with the repository's name for chassis's (copier.yml). #]
+[%- filter replace("chassis", name) %][% include "Dockerfile" %][% endfilter -%]
