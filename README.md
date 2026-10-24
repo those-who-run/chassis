@@ -1,14 +1,16 @@
 # Chassis
 
-The Go template, made with copier, that Those Who Run v2 repositories
-start from: the layout, `make check`, CI, releases and the guardrails
-built in.
-It holds no component of its own; each Go component's repository is
-made from it.
+The Go template for Those Who Run v2 repositories, a copier template: each
+Go component's repository is made from it with `copier copy`, with the
+layout, `make check`, CI, releases and the guardrails built in.
+It holds no component of its own, and no `copier.yml` yet: that arrives
+with those-who-run/paddock#21.
 
 Issues are off in this repository. Every issue, the roadmap and the decisions
-(ADRs) live in [those-who-run/paddock](https://github.com/those-who-run/paddock). A pull request here closes
-its paddock issue with `Closes those-who-run/paddock#N.`
+(ADRs) live in [those-who-run/paddock](https://github.com/those-who-run/paddock). A pull request here
+names its paddock issue: `Closes those-who-run/paddock#N.` when it meets every
+acceptance criterion, `Part of those-who-run/paddock#N` otherwise
+([`AGENTS.md`](AGENTS.md)).
 
 ## Checks
 
