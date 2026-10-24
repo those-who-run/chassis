@@ -24,10 +24,11 @@ _envops:
   keep_trailing_newline: true
 
 # What stays in chassis: this file, the template's own test and what it installs,
-# its own example command when the repository has another name, and, for a
-# repository without an image, the image's files. Copier's defaults are kept
-# (setting _exclude replaces them). The plain README.md stays out on its own:
-# README.md.jinja is its sibling.
+# its release history (CHANGELOG.md, which release-please writes), its own example
+# command when the repository has another name, and, for a repository without an
+# image, the image's files. Copier's defaults are kept (setting _exclude replaces
+# them). The plain README.md stays out on its own: README.md.jinja is its sibling,
+# and so is .release-please-manifest.json's.
 _exclude:
   - copier.yml
   - "~*"
@@ -37,11 +38,19 @@ _exclude:
   - .DS_Store
   - /.github/requirements-copier.txt
   - /tests/test_template.py
+  - /CHANGELOG.md
   - "[% if name != 'chassis' %]/cmd/chassis/[% endif %]"
   - "[% if not image %]/Dockerfile[% endif %]"
   - "[% if not image %]/.dockerignore[% endif %]"
   - "[% if not image %]/.github/workflows/image.yml[% endif %]"
   - "[% if not image %]/.github/workflows/release.yml[% endif %]"
+
+# A repository's release-please manifest is its own from the start: copier writes
+# it once, at 0.0.0 (.release-please-manifest.json.jinja), and never again, so a
+# `copier update` leaves the repository's released version alone. Patterns here
+# match the path in the repository, without the template suffix.
+_skip_if_exists:
+  - /.release-please-manifest.json
 
 _message_after_copy: |
   [[ name ]] is ready. Next: README.md, "Making a repository from this template",

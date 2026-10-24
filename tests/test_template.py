@@ -33,11 +33,13 @@ VENV = ROOT / "build" / "copier-venv"
 NAME = "testcar"
 DESCRIPTION = "The test car: what tests/test_template.py renders."
 
-# In chassis, never in a repository made from it.
+# In chassis, never in a repository made from it. CHANGELOG.md is chassis's release
+# history, once release-please has written one.
 CHASSIS_ONLY = {
     "copier.yml",
     ".github/requirements-copier.txt",
     "tests/test_template.py",
+    "CHANGELOG.md",
 }
 IMAGE_FILES = {
     "Dockerfile",
@@ -50,6 +52,10 @@ README = "README.md"
 ANSWERS = ".copier-answers.yml"
 RELEASE = ".github/workflows/release.yml"
 RELEASE_PR = ".github/workflows/release-pr.yml"
+# A repository's own release-please manifest, which starts at 0.0.0 whatever chassis
+# has released.
+MANIFEST = ".release-please-manifest.json"
+FIRST_MANIFEST = '{".": "0.0.0"}\n'
 CHASSIS_ONLY_CONDITION = (
     "    # chassis is the template, not a component: it never publishes an image.\n"
     "    if: github.repository != 'those-who-run/chassis'\n"
@@ -95,6 +101,19 @@ def run(cmd: list[str], cwd: Path) -> subprocess.CompletedProcess[str]:
     return subprocess.run(cmd, cwd=cwd, capture_output=True, text=True)
 
 
+def copier_copy(src: Path, dst: Path, image: bool, *extra: str) -> None:
+    """Render src into dst with the test answers, or fail with copier's output."""
+    cmd = [
+        str(copier()), "copy", "--defaults", "--quiet", *extra,
+        "--data", f"name={NAME}", "--data", f"description={DESCRIPTION}",
+        "--data", f"image={str(image).lower()}",
+        str(src), str(dst),
+    ]
+    done = run(cmd, ROOT)
+    if done.returncode != 0:
+        raise AssertionError(f"copier copy failed:\n{done.stdout}{done.stderr}")
+
+
 class Rendered(unittest.TestCase):
     """A repository rendered from the template with IMAGE as the answer."""
 
@@ -104,16 +123,11 @@ class Rendered(unittest.TestCase):
     def setUpClass(cls):
         cls._tmp = tempfile.TemporaryDirectory()
         cls.dst = Path(cls._tmp.name) / NAME
-        cmd = [
-            str(copier()), "copy", "--defaults", "--quiet", "--vcs-ref", "HEAD",
-            "--data", f"name={NAME}", "--data", f"description={DESCRIPTION}",
-            "--data", f"image={str(cls.IMAGE).lower()}",
-            str(ROOT), str(cls.dst),
-        ]
-        done = run(cmd, ROOT)
-        if done.returncode != 0:
+        try:
+            copier_copy(ROOT, cls.dst, cls.IMAGE, "--vcs-ref", "HEAD")
+        except AssertionError:
             cls._tmp.cleanup()
-            raise AssertionError(f"copier copy failed:\n{done.stdout}{done.stderr}")
+            raise
 
     @classmethod
     def tearDownClass(cls):
@@ -138,6 +152,9 @@ class Rendered(unittest.TestCase):
     def test_each_file_is_chassiss_own_with_the_name_changed(self):
         for path in sorted(self.expected_files() - {README, ANSWERS}):
             with self.subTest(path=path):
+                if path == MANIFEST:
+                    self.assertEqual(self.rendered(path), FIRST_MANIFEST)
+                    continue
                 want = (ROOT / path.replace(f"cmd/{NAME}/", "cmd/chassis/", 1)).read_text(
                     encoding="utf-8"
                 )
@@ -193,6 +210,62 @@ class RenderedWithoutAnImage(Rendered):
 
     def test_no_release_workflow_is_dispatched(self):
         self.assertIn('release-workflow: ""', self.rendered(RELEASE_PR))
+
+
+class ChassisReleaseHistoryStaysInChassis(unittest.TestCase):
+    """Once chassis has released, its version and changelog are still its own: a
+    scratch copy of chassis with both, rendered, gives a repository at 0.0.0 with no
+    changelog, and a render over a repository that has released keeps its version."""
+
+    CHASSIS_VERSION = "4.5.6"
+
+    @classmethod
+    def setUpClass(cls):
+        cls._tmp = tempfile.TemporaryDirectory()
+        tmp = Path(cls._tmp.name)
+        cls.src = tmp / "chassis"
+        for f in chassis_files():
+            (cls.src / f).parent.mkdir(parents=True, exist_ok=True)
+            shutil.copy2(ROOT / f, cls.src / f)
+        (cls.src / MANIFEST).write_text(f'{{".": "{cls.CHASSIS_VERSION}"}}\n', encoding="utf-8")
+        (cls.src / "CHANGELOG.md").write_text(
+            "# Changelog\n\n"
+            f"## [{cls.CHASSIS_VERSION}](https://github.com/those-who-run/chassis/compare/v4.5.5...v{cls.CHASSIS_VERSION})\n\n"
+            "### Bug Fixes\n\n* a fix only chassis has\n",
+            encoding="utf-8",
+        )
+        cls.dst = tmp / NAME
+        try:
+            copier_copy(cls.src, cls.dst, False)
+        except AssertionError:
+            cls._tmp.cleanup()
+            raise
+
+    @classmethod
+    def tearDownClass(cls):
+        cls._tmp.cleanup()
+
+    def test_the_new_repository_starts_at_0_0_0(self):
+        self.assertEqual((self.dst / MANIFEST).read_text(encoding="utf-8"), FIRST_MANIFEST)
+
+    def test_chassiss_changelog_stays_behind(self):
+        self.assertFalse((self.dst / "CHANGELOG.md").exists())
+        for path in sorted(files(self.dst)):
+            with self.subTest(path=path):
+                text = (self.dst / path).read_text(encoding="utf-8")
+                self.assertNotIn(self.CHASSIS_VERSION, text)
+                self.assertNotIn("a fix only chassis has", text)
+
+    def test_a_repositorys_own_version_is_never_overwritten(self):
+        # _skip_if_exists names the manifest by its path in the repository, without
+        # the template suffix; --overwrite would replace any file it doesn't match.
+        dst = Path(self._tmp.name) / "released"
+        dst.mkdir()
+        released = '{\n  ".": "0.3.0"\n}\n'
+        (dst / MANIFEST).write_text(released, encoding="utf-8")
+        copier_copy(self.src, dst, False, "--overwrite")
+        self.assertEqual((dst / MANIFEST).read_text(encoding="utf-8"), released)
+        self.assertTrue((dst / "go.mod").is_file())
 
 
 if __name__ == "__main__":

@@ -132,6 +132,10 @@ questions and what stays out of a new repository.
   explains, and the repository's own rows stay.
 - copier's delimiters are `[[ ]]` and `[% %]`, not `{{ }}` and `{% %}`, so the
   GitHub Actions expressions in the workflows stay as they are.
+- chassis's releases stay its own: its `CHANGELOG.md` is left out, and a new
+  repository's `.release-please-manifest.json` starts at `0.0.0` and is never
+  touched by `copier update` (`_skip_if_exists`), so the repository's versions
+  follow its own releases, not chassis's.
 - `release.yml` here never publishes: its jobs run only outside
   `those-who-run/chassis`, and a rendered repository's copy has no such
   condition.
