@@ -26,7 +26,11 @@ _envops:
 # What stays in chassis: this file, the template's own test and what it installs,
 # its release history (CHANGELOG.md, which release-please writes), its own example
 # command when the repository has another name, and, for a repository without an
-# image, the image's files. Copier's defaults are kept (setting _exclude replaces
+# image (a library), the image's files and the example service: cmd/ and
+# internal/service/. (A pattern without a trailing slash leaves out the directory
+# itself, not only what is in it.) A library gets doc.go
+# and doc_test.go instead, whose names render empty, and so are skipped, for a
+# repository with an image. Copier's defaults are kept (setting _exclude replaces
 # them). The plain README.md stays out on its own: README.md.jinja is its sibling,
 # and so is .release-please-manifest.json's.
 _exclude:
@@ -39,11 +43,13 @@ _exclude:
   - /.github/requirements-copier.txt
   - /tests/test_template.py
   - /CHANGELOG.md
-  - "[% if name != 'chassis' %]/cmd/chassis/[% endif %]"
+  - "[% if name != 'chassis' %]/cmd/chassis[% endif %]"
   - "[% if not image %]/Dockerfile[% endif %]"
   - "[% if not image %]/.dockerignore[% endif %]"
   - "[% if not image %]/.github/workflows/image.yml[% endif %]"
   - "[% if not image %]/.github/workflows/release.yml[% endif %]"
+  - "[% if not image %]/cmd[% endif %]"
+  - "[% if not image %]/internal/service[% endif %]"
 
 # A repository's release-please manifest is its own from the start: copier writes
 # it once, at 0.0.0 (.release-please-manifest.json.jinja), and never again, so a
@@ -79,5 +85,7 @@ image:
   type: bool
   help: >-
     Does it ship a container image? No for a library (salsa, contracts): the
-    Dockerfile, the image check and the release workflow are left out
+    Dockerfile, the image check, the release workflow and the example service
+    (cmd/, internal/service/) are left out, and the module starts with a
+    placeholder package in doc.go
   default: true

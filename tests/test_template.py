@@ -47,6 +47,12 @@ IMAGE_FILES = {
     ".github/workflows/image.yml",
     ".github/workflows/release.yml",
 }
+# A library has no example service: no cmd/ and no internal/service/. It gets a
+# placeholder package instead, which chassis, a service, has only as templates
+# whose names render empty with an image.
+SERVICE_DIRS = ("cmd/", "internal/service/")
+LIBRARY_FILES = {"doc.go", "doc_test.go"}
+LIBRARY_ONLY_PREFIX = "[% if not image %]"
 # Files whose rendering is more than chassis's own with the name changed.
 README = "README.md"
 ANSWERS = ".copier-answers.yml"
@@ -101,11 +107,11 @@ def run(cmd: list[str], cwd: Path) -> subprocess.CompletedProcess[str]:
     return subprocess.run(cmd, cwd=cwd, capture_output=True, text=True)
 
 
-def copier_copy(src: Path, dst: Path, image: bool, *extra: str) -> None:
+def copier_copy(src: Path, dst: Path, image: bool, *extra: str, name: str = NAME) -> None:
     """Render src into dst with the test answers, or fail with copier's output."""
     cmd = [
         str(copier()), "copy", "--defaults", "--quiet", *extra,
-        "--data", f"name={NAME}", "--data", f"description={DESCRIPTION}",
+        "--data", f"name={name}", "--data", f"description={DESCRIPTION}",
         "--data", f"image={str(image).lower()}",
         str(src), str(dst),
     ]
@@ -144,13 +150,14 @@ class Rendered(unittest.TestCase):
         }
         if not self.IMAGE:
             want -= IMAGE_FILES
+            want = {f for f in want if not f.startswith(SERVICE_DIRS)} | LIBRARY_FILES
         return want | {ANSWERS}
 
     def test_every_file_of_chassis_and_nothing_else(self):
         self.assertEqual(files(self.dst), self.expected_files())
 
     def test_each_file_is_chassiss_own_with_the_name_changed(self):
-        for path in sorted(self.expected_files() - {README, ANSWERS}):
+        for path in sorted(self.expected_files() - {README, ANSWERS} - LIBRARY_FILES):
             with self.subTest(path=path):
                 if path == MANIFEST:
                     self.assertEqual(self.rendered(path), FIRST_MANIFEST)
@@ -172,8 +179,12 @@ class Rendered(unittest.TestCase):
     def test_every_template_renders_in_place_of_chassiss_own_file(self):
         # A .jinja file without a plain sibling would leave chassis without the file
         # it gives a new repository, so `make check` here would not cover it.
+        # A library's own files have no sibling here, chassis being a service; the
+        # render without an image runs every check on them instead.
         for path in sorted(f for f in chassis_files() if f.endswith(".jinja")):
-            if path.startswith("[[_copier_conf.answers_file]]") or path == "README.md.jinja":
+            if path.startswith(("[[_copier_conf.answers_file]]", LIBRARY_ONLY_PREFIX)):
+                continue
+            if path == "README.md.jinja":
                 continue
             plain = path.removesuffix(".jinja").replace("cmd/[[name]]/", "cmd/chassis/", 1)
             with self.subTest(path=path):
@@ -195,18 +206,43 @@ class Rendered(unittest.TestCase):
         for line in (f"name: {NAME}", f"image: {str(self.IMAGE).lower()}", "_src_path: ", "_commit: "):
             self.assertIn(line, answers)
 
+    def test_the_service_is_there_only_with_an_image(self):
+        for directory in ("cmd", "internal/service"):
+            # The directory itself too, not only its files.
+            with self.subTest(directory=directory):
+                self.assertEqual((self.dst / directory).is_dir(), self.IMAGE)
+        self.assertEqual((self.dst / "doc.go").is_file(), not self.IMAGE)
+
     def test_the_rendered_repository_passes_its_checks(self):
-        targets = ["fmt-check", "tidy", "vet", "build", "test"] if self.IMAGE else ["vet", "build"]
+        # make check's Go checks and make test; only the commit hooks are left out,
+        # since the render is no git repository.
+        targets = ["fmt-check", "tidy", "vet", "lint", "build", "test", "vuln"]
         done = run(["make", *targets], self.dst)
         self.assertEqual(done.returncode, 0, f"make {' '.join(targets)}:\n{done.stdout}{done.stderr}")
 
 
 class RenderedWithoutAnImage(Rendered):
-    """A library's repository: no Dockerfile, no image check and nothing to publish.
-    Its checks run as the one above, so here only vet and build run, to show the
-    Go code still builds."""
+    """A library's repository: no Dockerfile, no image check, nothing to publish and
+    no example service, but a placeholder package that every check runs on."""
 
     IMAGE = False
+
+    def test_the_placeholder_package(self):
+        doc = self.rendered("doc.go")
+        self.assertIn(f"// Package {NAME} is the {NAME} library", doc)
+        self.assertIn(f'func Name() string {{ return "{NAME}" }}', doc)
+        test = self.rendered("doc_test.go")
+        self.assertIn(f'"github.com/those-who-run/{NAME}"', test)
+        self.assertIn(f"// Output: {NAME}", test)
+
+    def test_a_hyphenated_name_still_makes_a_package(self):
+        # A Go package name has no hyphens; the module path keeps them.
+        with tempfile.TemporaryDirectory() as tmp:
+            dst = Path(tmp) / "test-car"
+            copier_copy(ROOT, dst, False, "--vcs-ref", "HEAD", name="test-car")
+            self.assertIn("package testcar\n", (dst / "doc.go").read_text(encoding="utf-8"))
+            done = run(["make", "vet", "go-test"], dst)
+            self.assertEqual(done.returncode, 0, done.stdout + done.stderr)
 
     def test_no_release_workflow_is_dispatched(self):
         self.assertIn('release-workflow: ""', self.rendered(RELEASE_PR))

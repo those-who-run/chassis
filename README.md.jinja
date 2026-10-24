@@ -16,12 +16,14 @@ what a new clone runs first.
 ## Conventions
 
 The ones every Go component shares, from the
-[`chassis`](https://github.com/those-who-run/chassis) template:
+[`chassis`](https://github.com/those-who-run/chassis) template[% if not image %].
+This repository is a library, with no command or service yet; they apply to any
+it adds under `cmd/`[% endif %]:
 
 - **Configuration from the environment**, read once at start-up into a typed
   struct; an unset variable takes its default and a value that can't be read
-  stops the process. The example reads `ADDR` (`:8080`) and `LOG_LEVEL`
-  (`info`).
+  stops the process.[% if image %] The example reads `ADDR` (`:8080`) and
+  `LOG_LEVEL` (`info`).[% endif %]
 - **Logging with `log/slog`, as JSON** on standard output, one object per line,
   with key-value pairs.
 - **A health endpoint**, `GET /healthz`, which answers 200 while the process can
@@ -32,7 +34,11 @@ The ones every Go component shares, from the
 This repository was made from `chassis` with `copier copy`, and
 `.copier-answers.yml` records the release it came from and the answers given.
 Renovate proposes each new `chassis` release as a PR that runs
-`copier update`; chassis's README has the rest.
+`copier update`; chassis's README has the rest.[% if not image %]
+
+The module started with the template's placeholder package, `Name` in `doc.go`
+and its example in `doc_test.go`, so that every check had code to run on; the
+library's own API and tests replace them.[% endif %]
 [%- if image %]
 
 ## Releases

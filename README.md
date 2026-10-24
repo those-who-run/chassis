@@ -14,9 +14,10 @@ acceptance criterion, `Part of those-who-run/paddock#N` otherwise
 
 ## What a repository gets
 
-- A Go module: `cmd/<name>/main.go`, the example service in
-  [`internal/service`](internal/service/service.go) with its tests, and `go.mod`
-  with the Go version and a `toolchain` line.
+- A Go module: `go.mod` with the Go version and a `toolchain` line, and with an
+  image `cmd/<name>/main.go` and the example service in
+  [`internal/service`](internal/service/service.go) with its tests; a library
+  gets a placeholder package instead ("Without an image").
 - `make check`, the same checks as CI ([`AGENTS.md`](AGENTS.md)), and
   [`.golangci.yml`](.golangci.yml). golangci-lint and govulncheck are pinned in
   [`tools/go.mod`](tools/go.mod) and run with `go tool -modfile=tools/go.mod`.
@@ -106,10 +107,24 @@ repository's own three ways, leaving conflicts marked for review.
 A library (`salsa`, `contracts`) answers no to "Does it ship a container
 image?". The repository then has no `Dockerfile`, `.dockerignore`,
 `.github/workflows/image.yml` or `.github/workflows/release.yml`, and
-`release-pr.yml` dispatches no release workflow: a release is its tag. To drop
-the image later, run `copier update --data image=false`, or delete those four
-files and set `release-workflow: ""` in `release-pr.yml`; then take
-`image / build` out of the repository's `checks` in `repos.json`.
+`release-pr.yml` dispatches no release workflow: a release is its tag. It has no
+example service either: no `cmd/` and no `internal/service/`. A library gets
+the module, the tools and the checks, and a placeholder package in its root,
+`doc.go` with one function, `Name`, and `doc_test.go` with its example, which
+the library's own API and tests replace. A package is needed for the checks to
+mean anything: with no Go code, `go build`, go vet, golangci-lint and
+govulncheck have nothing to look at, and with no statements `go tool cover`
+reports 0 % coverage, so `make check` and CI's `go / check` would fail the
+coverage floor. `release-pr.yml` still grants `actions: write`: GitHub refuses
+to start a reusable workflow whose jobs ask for more than the caller grants,
+whether or not they run.
+
+To drop the image later, run `copier update --data image=false`, which also
+deletes the example service where the repository hasn't changed it and adds the
+placeholder package; or by hand, delete those four files, `cmd/` and
+`internal/service/`, set `release-workflow: ""` in `release-pr.yml` and keep a
+package with tests in the module. Then take `image / build` out of the
+repository's `checks` in `repos.json`.
 
 ## How the template is laid out
 
@@ -130,6 +145,10 @@ questions and what stays out of a new repository.
   `copier update` merges the template's later changes into it three ways, as it
   does for `go.mod`, so a row chassis adds arrives with the `require` it
   explains, and the repository's own rows stay.
+- A library's placeholder package exists only as templates,
+  `[% if not image %]doc.go[% endif %].jinja` and its test, whose names render
+  empty, and so are skipped, for a repository with an image. The render without
+  an image runs every check on them.
 - copier's delimiters are `[[ ]]` and `[% %]`, not `{{ }}` and `{% %}`, so the
   GitHub Actions expressions in the workflows stay as they are.
 - chassis's releases stay its own: its `CHANGELOG.md` is left out, and a new
