@@ -3,13 +3,54 @@ package main
 import (
 	"bytes"
 	"context"
+	"net"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 )
 
 func env(vars map[string]string) func(string) string {
 	return func(key string) string { return vars[key] }
+}
+
+// readyLog collects the service's log and closes ready once it logs "serving", so a
+// test stops the service when it is listening rather than after a guessed delay.
+type readyLog struct {
+	mu    sync.Mutex
+	buf   bytes.Buffer
+	once  sync.Once
+	ready chan struct{}
+}
+
+func newReadyLog() *readyLog { return &readyLog{ready: make(chan struct{})} }
+
+// Write takes one record per call, as slog's handlers write them.
+func (l *readyLog) Write(p []byte) (int, error) {
+	l.mu.Lock()
+	defer l.mu.Unlock()
+	if bytes.Contains(p, []byte(`"msg":"serving"`)) {
+		l.once.Do(func() { close(l.ready) })
+	}
+	return l.buf.Write(p)
+}
+
+func (l *readyLog) String() string {
+	l.mu.Lock()
+	defer l.mu.Unlock()
+	return l.buf.String()
+}
+
+// heldAddress returns an address another listener holds for the rest of the test,
+// so listening on it fails at once, with no name to resolve.
+func heldAddress(t *testing.T) string {
+	t.Helper()
+	ln, err := net.Listen("tcp", "127.0.0.1:0")
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = ln.Close() })
+	return ln.Addr().String()
 }
 
 func TestVersion(t *testing.T) {
@@ -42,18 +83,35 @@ func TestABadConfigurationIsAUsageError(t *testing.T) {
 
 func TestAServiceThatCannotStartExitsOne(t *testing.T) {
 	var stdout bytes.Buffer
-	code := run(t.Context(), nil, env(map[string]string{"ADDR": "256.0.0.1:0"}), &stdout, &bytes.Buffer{})
+	code := run(t.Context(), nil, env(map[string]string{"ADDR": heldAddress(t)}), &stdout, &bytes.Buffer{})
 	if code != 1 || !strings.Contains(stdout.String(), `"msg":"stopped"`) {
 		t.Errorf("exit %d, log %q; want 1 and the failure logged", code, stdout.String())
 	}
 }
 
 func TestServesUntilCancelled(t *testing.T) {
-	ctx, cancel := context.WithTimeout(t.Context(), 100*time.Millisecond)
+	ctx, cancel := context.WithCancel(t.Context())
 	defer cancel()
-	var stdout bytes.Buffer
-	code := run(ctx, nil, env(map[string]string{"ADDR": "127.0.0.1:0"}), &stdout, &bytes.Buffer{})
-	if code != 0 || !strings.Contains(stdout.String(), `"msg":"serving"`) {
-		t.Errorf("exit %d, log %q; want 0 and serving logged", code, stdout.String())
+	stdout := newReadyLog()
+	exit := make(chan int, 1)
+	go func() {
+		exit <- run(ctx, nil, env(map[string]string{"ADDR": "127.0.0.1:0"}), stdout, &bytes.Buffer{})
+	}()
+	// The timeouts only stop a hung test; the service is cancelled once it serves.
+	select {
+	case <-stdout.ready:
+	case code := <-exit:
+		t.Fatalf("exit %d before serving, log %q", code, stdout.String())
+	case <-time.After(10 * time.Second):
+		t.Fatal("not serving after 10 s")
+	}
+	cancel()
+	select {
+	case code := <-exit:
+		if code != 0 || !strings.Contains(stdout.String(), `"msg":"shutting down"`) {
+			t.Errorf("exit %d, log %q; want 0 and the shutdown logged", code, stdout.String())
+		}
+	case <-time.After(10 * time.Second):
+		t.Fatal("still running 10 s after cancel")
 	}
 }

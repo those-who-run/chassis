@@ -11,12 +11,66 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 )
 
 func env(vars map[string]string) func(string) string {
 	return func(key string) string { return vars[key] }
+}
+
+// readyLog collects a log and keeps the "serving" record once it is written, so a
+// test talks to the server and stops it when it is listening rather than after a
+// guessed delay.
+type readyLog struct {
+	mu      sync.Mutex
+	buf     bytes.Buffer
+	serving map[string]any
+	ready   chan struct{}
+}
+
+func newReadyLog() *readyLog { return &readyLog{ready: make(chan struct{})} }
+
+// Write takes one JSON record per call, as slog's handlers write them.
+func (l *readyLog) Write(p []byte) (int, error) {
+	l.mu.Lock()
+	defer l.mu.Unlock()
+	var record map[string]any
+	if l.serving == nil && json.Unmarshal(p, &record) == nil && record["msg"] == "serving" {
+		l.serving = record
+		close(l.ready)
+	}
+	return l.buf.Write(p)
+}
+
+func (l *readyLog) String() string {
+	l.mu.Lock()
+	defer l.mu.Unlock()
+	return l.buf.String()
+}
+
+// addr is the address the "serving" record names; call it once ready is closed.
+func (l *readyLog) addr() string {
+	l.mu.Lock()
+	defer l.mu.Unlock()
+	addr, _ := l.serving["addr"].(string)
+	return addr
+}
+
+func get(t *testing.T, url string) int {
+	t.Helper()
+	req, err := http.NewRequestWithContext(t.Context(), http.MethodGet, url, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	_, _ = io.Copy(io.Discard, resp.Body)
+	_ = resp.Body.Close()
+	return resp.StatusCode
 }
 
 func TestConfigFromEnv(t *testing.T) {
@@ -103,18 +157,8 @@ func TestRunServesUntilCancelled(t *testing.T) {
 	done := make(chan error, 1)
 	go func() { done <- serve(ctx, ln, NewLogger(&logs, slog.LevelInfo), "test") }()
 
-	req, err := http.NewRequestWithContext(t.Context(), http.MethodGet, "http://"+ln.Addr().String()+"/healthz", nil)
-	if err != nil {
-		t.Fatal(err)
-	}
-	resp, err := http.DefaultClient.Do(req)
-	if err != nil {
-		t.Fatal(err)
-	}
-	_, _ = io.Copy(io.Discard, resp.Body)
-	_ = resp.Body.Close()
-	if resp.StatusCode != http.StatusOK {
-		t.Errorf("GET /healthz status = %d", resp.StatusCode)
+	if code := get(t, "http://"+ln.Addr().String()+"/healthz"); code != http.StatusOK {
+		t.Errorf("GET /healthz status = %d", code)
 	}
 
 	cancel()
@@ -132,20 +176,47 @@ func TestRunServesUntilCancelled(t *testing.T) {
 }
 
 func TestRunReportsAnAddressItCannotListenOn(t *testing.T) {
-	err := Run(t.Context(), Config{Addr: "256.0.0.1:0"}, NewLogger(io.Discard, slog.LevelInfo), "test")
+	// An address another listener holds fails at once, with no name to resolve.
+	held, err := net.Listen("tcp", "127.0.0.1:0")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer func() { _ = held.Close() }()
+	err = Run(t.Context(), Config{Addr: held.Addr().String()}, NewLogger(io.Discard, slog.LevelInfo), "test")
 	if err == nil || !strings.HasPrefix(err.Error(), "listen: ") {
 		t.Errorf("Run error = %v, want a listen error", err)
 	}
 }
 
 func TestRunListensOnTheConfiguredAddress(t *testing.T) {
-	// Cancelled once Run is serving: a context cancelled before it would stop the
-	// listen itself.
-	ctx, cancel := context.WithTimeout(t.Context(), 100*time.Millisecond)
+	ctx, cancel := context.WithCancel(t.Context())
 	defer cancel()
-	err := Run(ctx, Config{Addr: "127.0.0.1:0"}, NewLogger(io.Discard, slog.LevelInfo), "test")
-	if err != nil {
-		t.Errorf("Run = %v, want nil", err)
+	logs := newReadyLog()
+	done := make(chan error, 1)
+	go func() { done <- Run(ctx, Config{Addr: "127.0.0.1:0"}, NewLogger(logs, slog.LevelInfo), "test") }()
+	// The timeouts only stop a hung test; Run is cancelled once it serves.
+	select {
+	case <-logs.ready:
+	case err := <-done:
+		t.Fatalf("Run = %v before serving, log %q", err, logs.String())
+	case <-time.After(10 * time.Second):
+		t.Fatal("not serving after 10 s")
+	}
+	addr := logs.addr()
+	if host, _, err := net.SplitHostPort(addr); err != nil || host != "127.0.0.1" {
+		t.Fatalf("serving on %q, want the configured 127.0.0.1", addr)
+	}
+	if code := get(t, "http://"+addr+"/healthz"); code != http.StatusOK {
+		t.Errorf("GET /healthz on %s status = %d", addr, code)
+	}
+	cancel()
+	select {
+	case err := <-done:
+		if err != nil {
+			t.Errorf("Run = %v after cancel, want nil", err)
+		}
+	case <-time.After(10 * time.Second):
+		t.Fatal("Run still serving 10 s after cancel")
 	}
 }
 
