@@ -17,6 +17,7 @@ This file stays in chassis (copier.yml's _exclude).
 from __future__ import annotations
 
 import hashlib
+import json
 import os
 import shutil
 import subprocess
@@ -289,6 +290,12 @@ class ChassisReleaseHistoryStaysInChassis(unittest.TestCase):
 
     def test_the_new_repository_starts_at_0_0_0(self):
         self.assertEqual((self.dst / MANIFEST).read_text(encoding="utf-8"), FIRST_MANIFEST)
+
+    def test_its_first_release_is_0_1_0(self):
+        # A manifest at 0.0.0 has no tag behind it, so release-please takes the
+        # first release as an initial one: initial-version, or 1.0.0 without it.
+        config = json.loads((self.dst / "release-please-config.json").read_text(encoding="utf-8"))
+        self.assertEqual(config["initial-version"], "0.1.0")
 
     def test_chassiss_changelog_stays_behind(self):
         self.assertFalse((self.dst / "CHANGELOG.md").exists())

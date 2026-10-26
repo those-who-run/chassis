@@ -162,6 +162,10 @@ questions and what stays out of a new repository.
   repository's `.release-please-manifest.json` starts at `0.0.0` and is never
   touched by `copier update` (`_skip_if_exists`), so the repository's versions
   follow its own releases, not chassis's.
+- `release-please-config.json` sets `initial-version` to `0.1.0`. A manifest at
+  `0.0.0` has no release tag behind it, so release-please treats the first
+  release as an initial one, which `bump-minor-pre-major` doesn't reach, and
+  without the setting it would be `1.0.0`, as chassis's own first release was.
 - `release.yml` here never publishes: its jobs run only outside
   `those-who-run/chassis`, and a rendered repository's copy has no such
   condition.
