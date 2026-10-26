@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.0.4](https://github.com/those-who-run/chassis/compare/v1.0.3...v1.0.4) (2026-10-26)
+
+
+### Dependencies
+
+* update all dependencies ([#17](https://github.com/those-who-run/chassis/issues/17)) ([47f8b0d](https://github.com/those-who-run/chassis/commit/47f8b0de683070d6eeba8024e7eb5a56197d1dc0))
+
 ## [1.0.3](https://github.com/those-who-run/chassis/compare/v1.0.2...v1.0.3) (2026-10-26)
 
 
