@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.0.3](https://github.com/those-who-run/chassis/compare/v1.0.2...v1.0.3) (2026-10-26)
+
+
+### Bug Fixes
+
+* **service:** check the error the server returns after shutdown ([#18](https://github.com/those-who-run/chassis/issues/18)) ([4f26621](https://github.com/those-who-run/chassis/commit/4f2662177bea7632f23b77a02af224b4c7f7f7b1))
+
 ## [1.0.2](https://github.com/those-who-run/chassis/compare/v1.0.1...v1.0.2) (2026-10-26)
 
 
