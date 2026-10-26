@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.0.1](https://github.com/those-who-run/chassis/compare/v1.0.0...v1.0.1) (2026-10-26)
+
+
+### Bug Fixes
+
+* a new repository's first release is 0.1.0, not 1.0.0 ([#10](https://github.com/those-who-run/chassis/issues/10)) ([5e8092d](https://github.com/those-who-run/chassis/commit/5e8092dbce63afb82c01b96e2a52b8dc77011609))
+
 ## 1.0.0 (2026-10-26)
 
 
