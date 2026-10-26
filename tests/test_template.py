@@ -63,6 +63,17 @@ RELEASE_PR = ".github/workflows/release-pr.yml"
 # has released.
 MANIFEST = ".release-please-manifest.json"
 FIRST_MANIFEST = '{".": "0.0.0"}\n'
+# The release PR's header (release-please-config.json): a repository without an
+# image has no release workflow for merging to start.
+RELEASE_CONFIG = "release-please-config.json"
+HEADER_WITH_IMAGE = (
+    "Merging this releases it: release-please tags the merge commit, creates the "
+    "GitHub release and starts the release workflow on the tag."
+)
+HEADER_WITHOUT_IMAGE = (
+    "Merging this releases it: release-please tags the merge commit and creates the "
+    "GitHub release."
+)
 CHASSIS_ONLY_CONDITION = (
     "    # chassis is the template, not a component: it never publishes an image.\n"
     "    if: github.repository != 'those-who-run/chassis'\n"
@@ -171,6 +182,8 @@ class Rendered(unittest.TestCase):
                     want = want.replace(CHASSIS_ONLY_CONDITION, "")
                 if path == RELEASE_PR and not self.IMAGE:
                     want = want.replace("release-workflow: release.yml", 'release-workflow: ""')
+                if path == RELEASE_CONFIG and not self.IMAGE:
+                    want = want.replace(HEADER_WITH_IMAGE, HEADER_WITHOUT_IMAGE)
                 self.assertEqual(self.rendered(path).replace(NAME, "chassis"), want)
 
     def test_only_the_readme_and_the_answers_name_chassis(self):
@@ -206,6 +219,10 @@ class Rendered(unittest.TestCase):
         answers = self.rendered(ANSWERS)
         for line in (f"name: {NAME}", f"image: {str(self.IMAGE).lower()}", "_src_path: ", "_commit: "):
             self.assertIn(line, answers)
+
+    def test_the_release_prs_header_names_a_release_workflow_only_with_an_image(self):
+        header = json.loads(self.rendered(RELEASE_CONFIG)).get("pull-request-header")
+        self.assertEqual(header, HEADER_WITH_IMAGE if self.IMAGE else HEADER_WITHOUT_IMAGE)
 
     def test_the_service_is_there_only_with_an_image(self):
         for directory in ("cmd", "internal/service"):
@@ -295,7 +312,9 @@ class ChassisReleaseHistoryStaysInChassis(unittest.TestCase):
         # A manifest at 0.0.0 has no tag behind it, so release-please takes the
         # first release as an initial one: initial-version, or 1.0.0 without it.
         config = json.loads((self.dst / "release-please-config.json").read_text(encoding="utf-8"))
-        self.assertEqual(config["initial-version"], "0.1.0")
+        self.assertEqual(config.get("initial-version"), "0.1.0")
+        # A package's own value would win over the top-level one.
+        self.assertNotIn("initial-version", config.get("packages", {}).get(".", {}))
 
     def test_chassiss_changelog_stays_behind(self):
         self.assertFalse((self.dst / "CHANGELOG.md").exists())
