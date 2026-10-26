@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.0.2](https://github.com/those-who-run/chassis/compare/v1.0.1...v1.0.2) (2026-10-26)
+
+
+### Bug Fixes
+
+* a library's release PR header names no release workflow ([#12](https://github.com/those-who-run/chassis/issues/12)) ([26dc44e](https://github.com/those-who-run/chassis/commit/26dc44eba76fd94c23ce4202415d5a73ae52d1d2))
+
 ## [1.0.1](https://github.com/those-who-run/chassis/compare/v1.0.0...v1.0.1) (2026-10-26)
 
 
