@@ -1,2 +1,5 @@
-[# chassis's own release-please-config.json, with the repository's name for chassis's (copier.yml). #]
-[%- filter replace("chassis", name) %][% include "release-please-config.json" %][% endfilter -%]
+[# chassis's own release-please-config.json, with the repository's name for chassis's
+   (copier.yml). A repository without an image has no release workflow, so its
+   release PR's header doesn't promise one. #]
+[%- set config %][% filter replace("chassis", name) %][% include "release-please-config.json" %][% endfilter %][% endset -%]
+[[ config if image else config | replace(", creates the GitHub release and starts the release workflow on the tag.", " and creates the GitHub release.") -]]

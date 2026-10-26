@@ -114,7 +114,10 @@ repository's own three ways, leaving conflicts marked for review.
 A library (`salsa`, `contracts`) answers no to "Does it ship a container
 image?". The repository then has no `Dockerfile`, `.dockerignore`,
 `.github/workflows/image.yml` or `.github/workflows/release.yml`, and
-`release-pr.yml` dispatches no release workflow: a release is its tag. It has no
+`release-pr.yml` dispatches no release workflow: a release is its tag. The
+release PR's header (`pull-request-header` in `release-please-config.json`) says
+so: merging tags the commit and creates the GitHub release, with no release
+workflow. It has no
 example service either: no `cmd/` and no `internal/service/`. A library gets
 the module, the tools and the checks, and a placeholder package in its root,
 `doc.go` with one function, `Name`, and `doc_test.go` with its example, which
@@ -129,8 +132,9 @@ whether or not they run.
 To drop the image later, run `copier update --data image=false`, which also
 deletes the example service where the repository hasn't changed it and adds the
 placeholder package; or by hand, delete those four files, `cmd/` and
-`internal/service/`, set `release-workflow: ""` in `release-pr.yml` and keep a
-package with tests in the module. Then take `image / build` out of the
+`internal/service/`, set `release-workflow: ""` in `release-pr.yml`, take the
+release workflow out of `pull-request-header` in `release-please-config.json` and
+keep a package with tests in the module. Then take `image / build` out of the
 repository's `checks` in `repos.json`.
 
 ## How the template is laid out
@@ -164,8 +168,8 @@ questions and what stays out of a new repository.
   follow its own releases, not chassis's.
 - `release-please-config.json` sets `initial-version` to `0.1.0`. A manifest at
   `0.0.0` has no release tag behind it, so release-please treats the first
-  release as an initial one, which `bump-minor-pre-major` doesn't reach, and
-  without the setting it would be `1.0.0`, as chassis's own first release was.
+  release as an initial one, which `bump-minor-pre-major` doesn't reach. Without
+  the setting it would be `1.0.0`, as chassis's own first release was.
 - `release.yml` here never publishes: its jobs run only outside
   `those-who-run/chassis`, and a rendered repository's copy has no such
   condition.
