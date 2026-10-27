@@ -27,11 +27,14 @@ acceptance criterion, `Part of those-who-run/paddock#N` otherwise
   [`internal/dependencies`](internal/dependencies/dependencies_test.go).
 - CI ([`.github/workflows/ci.yml`](.github/workflows/ci.yml)): `test`
   (`make test`), `checks / checks` and `go / check`, from the reusable workflows in
-  `those-who-run/.github`, pinned by commit SHA.
+  `those-who-run/.github`, pinned by commit SHA. They run on every PR, on each push
+  to `main` and in the merge queue (`merge_group`), so a repository can turn the
+  queue on; [`tests/test_workflow_triggers.py`](tests/test_workflow_triggers.py)
+  holds them to it.
 - With an image: the [`Dockerfile`](Dockerfile) (multi-stage, base images pinned
   by digest, a static binary run as a non-root user) and
   [`image.yml`](.github/workflows/image.yml), which builds and smoke-tests the image
-  on every PR (`image / build`) and pushes nothing.
+  on every PR and in the merge queue (`image / build`) and pushes nothing.
 - Releases with release-please
   ([`release-pr.yml`](.github/workflows/release-pr.yml),
   [`release-please-config.json`](release-please-config.json), release type `go`,
