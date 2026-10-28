@@ -35,7 +35,7 @@ NAME = "testcar"
 DESCRIPTION = "The test car: what tests/test_template.py renders."
 
 # In chassis, never in a repository made from it. CHANGELOG.md is chassis's release
-# history, once release-please has written one.
+# history, which release-please writes.
 CHASSIS_ONLY = {
     "copier.yml",
     ".github/requirements-copier.txt",
