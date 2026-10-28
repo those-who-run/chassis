@@ -96,8 +96,9 @@ The maintainer's steps; agents never create repositories or change settings.
    and, with an image, `image / build`.
 6. Settings, once that PR is merged:
    - in `those-who-run/.github`'s `scripts/repos.json`, add `go / check` (and
-     `image / build` for an image) to the repository's `checks`, and for an image
-     set `publishes`, then run `scripts/protect-repo.sh`;
+     `image / build` for an image) to the repository's `checks`, for an image set
+     `publishes`, and set `merge_queue` to turn the merge queue on, then run
+     `make protect` there;
    - install the release App on the repository and create its
      `release-please` environment, as `those-who-run/.github`'s
      [workflows README](https://github.com/those-who-run/.github/blob/main/.github/workflows/README.md#the-repositorys-settings)
