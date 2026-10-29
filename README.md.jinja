@@ -10,8 +10,10 @@ acceptance criterion, `Part of those-who-run/paddock#N` otherwise
 
 ## Checks
 
-`make check` runs what CI runs; [`AGENTS.md`](AGENTS.md) says what that is and
-what a new clone runs first.
+A new clone or worktree runs `make prereqs` first: it checks that every tool
+`make check` and `make hooks` need is there, and says how to fix any that isn't.
+Then `make hooks` installs the commit hooks. `make check` runs what CI runs;
+[`AGENTS.md`](AGENTS.md) says what that is.
 
 ## Conventions
 

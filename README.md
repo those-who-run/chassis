@@ -180,8 +180,10 @@ questions and what stays out of a new repository.
 
 ## Checks
 
-`make check` runs what CI runs; [`AGENTS.md`](AGENTS.md) says what that is and
-what a new clone runs first. Here `make test` also renders the template, with
+A new clone or worktree runs `make prereqs` first: it checks that every tool
+`make check` and `make hooks` need is there, and says how to fix any that isn't.
+Then `make hooks` installs the commit hooks. `make check` runs what CI runs;
+[`AGENTS.md`](AGENTS.md) says what that is. Here `make test` also renders the template, with
 and without an image, into a temporary directory, checks every file against
 chassis's own, and runs the rendered repository's checks there
 ([`tests/test_template.py`](tests/test_template.py)), so a broken template fails

@@ -12,7 +12,7 @@ which apply here in full; these notes are only for Claude Code.
   them out). Each new worktree sets the noreply address of the account it
   works as, never the maintainer's, unless the environment already sets it,
   with `git config user.email <id>+<user>@users.noreply.github.com` before
-  the first commit, then runs `make hooks`.
+  the first commit, then runs `make prereqs` and `make hooks`.
 - Commits end with the trailer Claude Code writes,
   `Co-Authored-By: Claude <model> <noreply@anthropic.com>`, naming the model
   you are.
