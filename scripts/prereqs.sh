@@ -61,10 +61,14 @@ if [ -f go.mod ]; then
 	done <go.mod
 fi
 want=${gomod_toolchain:-$gomod_go}
-install_go="install $want from https://go.dev/dl/"
+if [ -n "$want" ]; then
+	install_go="install $want from https://go.dev/dl/"
+else
+	install_go="install Go from https://go.dev/dl/ (go.mod names no version)"
+fi
 
 if ! have go; then
-	missing "go: not found; $install_go (go.mod's toolchain line) and put its bin directory on PATH"
+	missing "go: not found; $install_go and put its bin directory on PATH"
 # Only standard output is parsed: the go command may warn on standard error first
 # (GOPATH set to GOROOT, say), and that would shift every field.
 elif ! env=$(cd / && GOTOOLCHAIN=local go env GOVERSION GOENV GOROOT CC 2>/dev/null); then
@@ -82,23 +86,27 @@ EOF
 	# GOTOOLCHAIN as the go command takes it: the environment, then `go env -w`'s
 	# file, then the Go installation's own go.env (where a distribution may set
 	# `local`), then the default, auto. Set but empty counts as unset, as it does
-	# for the go command.
+	# for the go command. The files are read either way: unsetting the
+	# environment's value only helps where they don't say local too.
+	toolchain= from=
+	for file in "$goenv" "$goroot/go.env"; do
+		[ -f "$file" ] || continue
+		while IFS= read -r line || [ -n "$line" ]; do
+			case $line in GOTOOLCHAIN=*) toolchain=${line#GOTOOLCHAIN=} ;; esac
+		done <"$file"
+		if [ -n "$toolchain" ]; then
+			from="set in $file"
+			break
+		fi
+	done
+	toolchain=${toolchain:-auto}
 	if [ -n "${GOTOOLCHAIN:-}" ]; then
+		case $toolchain in
+		auto | *+auto) fix="unset GOTOOLCHAIN or set it to auto" ;;
+		*) fix="set GOTOOLCHAIN to auto (unsetting it leaves GOTOOLCHAIN=$toolchain, $from)" ;;
+		esac
 		toolchain=$GOTOOLCHAIN from="set in the environment"
-		fix="unset GOTOOLCHAIN or set it to auto"
 	else
-		toolchain= from=
-		for file in "$goenv" "$goroot/go.env"; do
-			[ -f "$file" ] || continue
-			while IFS= read -r line || [ -n "$line" ]; do
-				case $line in GOTOOLCHAIN=*) toolchain=${line#GOTOOLCHAIN=} ;; esac
-			done <"$file"
-			if [ -n "$toolchain" ]; then
-				from="set in $file"
-				break
-			fi
-		done
-		toolchain=${toolchain:-auto}
 		fix="run \`go env -w GOTOOLCHAIN=auto\`"
 	fi
 	problem="go: $goversion is older than $want (go.mod) and GOTOOLCHAIN=$toolchain ($from)"

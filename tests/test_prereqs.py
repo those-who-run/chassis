@@ -148,6 +148,28 @@ class Prereqs(unittest.TestCase):
         self.assertIn("unset GOTOOLCHAIN or set it to auto", line)
         self.assertIn(f"install {WANT}", line)
 
+    def test_unsetting_gotoolchain_isnt_offered_where_go_env_says_local(self):
+        self.go("go1.26.9")
+        (self.goroot / "go.env").write_text("GOTOOLCHAIN=local\n", encoding="utf-8")
+        [line] = self.errors(self.run_make("prereqs", GOTOOLCHAIN="local"))
+        self.assertIn("GOTOOLCHAIN=local (set in the environment)", line)
+        self.assertIn(
+            f"set GOTOOLCHAIN to auto (unsetting it leaves GOTOOLCHAIN=local, set in {self.goroot}/go.env)",
+            line,
+        )
+        self.assertNotIn("unset GOTOOLCHAIN or", line)
+
+    def test_a_go_mod_without_a_version(self):
+        (self.module / "go.mod").write_text("module example.com/fixture\n", encoding="utf-8")
+        self.assertEqual(self.run_make("prereqs", GOTOOLCHAIN="local").returncode, 0)
+        self.remove("go")
+        [line] = self.errors(self.run_make("prereqs"))
+        self.assertEqual(
+            line,
+            "go: not found; install Go from https://go.dev/dl/ (go.mod names no version)"
+            " and put its bin directory on PATH",
+        )
+
     def test_gotoolchain_local_from_the_go_installation(self):
         # As Fedora's Go sets it, in $GOROOT/go.env; unsetting nothing helps there.
         self.go("go1.26.10-X:nodwarf5")
