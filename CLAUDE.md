@@ -13,10 +13,23 @@ which apply here in full; these notes are only for Claude Code.
   works as, never the maintainer's, unless the environment already sets it,
   with `git config user.email <id>+<user>@users.noreply.github.com` before
   the first commit, then runs `make hooks`.
+- Start the session for this repository in its clone or one of its
+  worktrees, not in another directory: Claude Code loads the project
+  settings and the guard of the directory the session starts in. A
+  coordinator handing work here from another repository starts a session
+  here for it.
 - Commits end with the trailer Claude Code writes,
   `Co-Authored-By: Claude <model> <noreply@anthropic.com>`, naming the model
   you are.
 - No session links in commits or PR bodies.
+- `gh pr create --body` replaces the organisation's
+  [PR template](https://github.com/those-who-run/.github/blob/main/PULL_REQUEST_TEMPLATE.md)
+  rather than filling it, so write its parts yourself: "What changed" with
+  its "AI assistance" and "New direct dependencies" lines, "How it was
+  checked" with its two checkboxes, a `Tests weakened:` line if one applies,
+  then the `Closes` or `Part of` line. The line Claude Code adds,
+  `🤖 Generated with [Claude Code](https://claude.com/claude-code)`, goes
+  last, after it.
 - Use `gh` for issues and PRs. Issues live in paddock: read one with
   `gh issue view N -R those-who-run/paddock --comments` before anything else;
   check its labels for `needs triage` and `hold`, and its author. Open the PR
