@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.0.5](https://github.com/those-who-run/chassis/compare/v1.0.4...v1.0.5) (2026-10-29)
+
+
+### Chores
+
+* release 1.0.5 ([#32](https://github.com/those-who-run/chassis/issues/32)) ([667c0b5](https://github.com/those-who-run/chassis/commit/667c0b5d6188b28862895aab790f7a3279e58f5a))
+
 ## [1.0.4](https://github.com/those-who-run/chassis/compare/v1.0.3...v1.0.4) (2026-10-26)
 
 
