@@ -32,8 +32,10 @@ and `Part of those-who-run/paddock#N` otherwise, as paddock's `AGENTS.md` says.
 
 It needs Go (the version in `go.mod`'s `toolchain` line, which the `go`
 command fetches when `GOTOOLCHAIN` allows it), `python3`, `pre-commit` and the
-network. CI's `image / build`, where the repository ships an image, also builds
-the Dockerfile and smoke-tests the image; `make check` doesn't.
+network. `make prereqs` checks for each tool, and says how to fix any that is
+missing; `make check` and `make hooks` run it first. CI's `image / build`,
+where the repository ships an image, also builds the Dockerfile and
+smoke-tests the image; `make check` doesn't.
 
 A change also carries a test for each acceptance criterion of its issue
 ([Go](#go) says where), docs changed in the same PR as what they describe,
@@ -79,12 +81,20 @@ and a recording that pins a behaviour where one applies.
 
 ## Make targets
 
+A new clone or worktree runs `make prereqs`, then `make hooks`, first.
+
+- `make prereqs`: checks every tool `make check` and `make hooks` need is
+  there (Go at `go.mod`'s `toolchain` version, or a `GOTOOLCHAIN` that lets
+  the `go` command fetch it, gofmt, the C compiler the race detector needs,
+  `python3`, `pre-commit`, `git` and `make`), offline and in well under 2 s.
+  Each one missing or unusable gets a line saying how to fix it.
 - `make check`: everything a PR must pass, as CI runs it.
 - `make test`: the Go tests with the coverage floor, and the repository's own
   checks: CI's `test` job, while iterating.
 - `make fmt`: formats the Go code; `make lint`: golangci-lint.
 - `make hooks`: installs the commit hooks. A new clone or worktree runs it
-  once, so the hooks run on every commit and commit message.
+  once, after `make prereqs`, so the hooks run on every commit and commit
+  message.
 
 `make help` lists the rest, among them each Go check on its own.
 

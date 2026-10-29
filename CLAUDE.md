@@ -12,7 +12,7 @@ which apply here in full; these notes are only for Claude Code.
   them out). Each new worktree sets the noreply address of the account it
   works as, never the maintainer's, unless the environment already sets it,
   with `git config user.email <id>+<user>@users.noreply.github.com` before
-  the first commit, then runs `make hooks`.
+  the first commit, then runs `make prereqs` and `make hooks`.
 - Start the session for this repository in its clone or one of its
   worktrees, not in another directory: Claude Code loads the project
   settings and the guard of the directory the session starts in. A

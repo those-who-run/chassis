@@ -3,7 +3,8 @@
 # checks in go.yml's order (CI's `go / check`) and `make test` (CI's `test`, which
 # calls this same target so the two can't drift).
 # Needs Go (the version in go.mod's toolchain line), python3 and pre-commit; the
-# guard copy check and the first run of the Go tools need the network.
+# guard copy check and the first run of the Go tools need the network. `make
+# prereqs` checks for the tools, and `make check` and `make hooks` run it first.
 
 PY ?= python3
 # golangci-lint and govulncheck, at the versions tools/go.mod pins and tools/go.sum
@@ -21,6 +22,7 @@ BUILD := build
 
 .PHONY: help
 help:
+	@echo "prereqs   - every tool make check and make hooks need is here, or how to fix it; a new clone or worktree runs it first"
 	@echo "check     - everything a PR must pass: the commit hooks on every file, the Go checks, then make test (CI runs all three)"
 	@echo "test      - the Go tests (race detector, no skips, coverage floor) and the repository's own checks (CI's test job)"
 	@echo "fmt       - format the Go code with gofmt"
@@ -32,7 +34,7 @@ help:
 
 # go.yml's order: gofmt, tidy, vet, golangci-lint, the tests, build, govulncheck.
 .PHONY: check
-check:
+check: prereqs
 	pre-commit run --all-files
 	$(MAKE) fmt-check tidy vet lint go-test build vuln
 	$(MAKE) test-repo
@@ -46,8 +48,16 @@ test: go-test test-repo
 test-repo: links guard
 	$(PY) -m unittest discover -s tests
 
+# Go at go.mod's toolchain version (or a GOTOOLCHAIN that fetches it), gofmt, cgo's
+# C compiler, python3, pre-commit, git and make: one line for each that is missing,
+# with the fix. Offline and quick; $(SHELL), not sh from PATH, so it runs whatever
+# PATH holds.
+.PHONY: prereqs
+prereqs:
+	@PY=$(PY) $(SHELL) scripts/prereqs.sh
+
 .PHONY: hooks
-hooks:
+hooks: prereqs
 	pre-commit install
 
 .PHONY: fmt
