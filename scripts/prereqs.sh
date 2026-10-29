@@ -65,8 +65,11 @@ install_go="install $want from https://go.dev/dl/"
 
 if ! have go; then
 	missing "go: not found; $install_go (go.mod's toolchain line) and put its bin directory on PATH"
-elif ! env=$(cd / && GOTOOLCHAIN=local go env GOVERSION GOENV GOROOT CC 2>&1); then
-	missing "go: \`go env\` failed ($env); $install_go"
+# Only standard output is parsed: the go command may warn on standard error first
+# (GOPATH set to GOROOT, say), and that would shift every field.
+elif ! env=$(cd / && GOTOOLCHAIN=local go env GOVERSION GOENV GOROOT CC 2>/dev/null); then
+	err=$(cd / && GOTOOLCHAIN=local go env GOVERSION GOENV GOROOT CC 2>&1 >/dev/null)
+	missing "go: \`go env\` failed ($err); $install_go"
 else
 	{
 		read -r goversion
@@ -78,8 +81,9 @@ $env
 EOF
 	# GOTOOLCHAIN as the go command takes it: the environment, then `go env -w`'s
 	# file, then the Go installation's own go.env (where a distribution may set
-	# `local`), then the default, auto.
-	if [ -n "${GOTOOLCHAIN+set}" ]; then
+	# `local`), then the default, auto. Set but empty counts as unset, as it does
+	# for the go command.
+	if [ -n "${GOTOOLCHAIN:-}" ]; then
 		toolchain=$GOTOOLCHAIN from="set in the environment"
 		fix="unset GOTOOLCHAIN or set it to auto"
 	else

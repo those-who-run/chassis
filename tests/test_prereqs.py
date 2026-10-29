@@ -54,12 +54,18 @@ class Prereqs(unittest.TestCase):
         path.write_text(f"#!/bin/sh\n{body}\n", encoding="utf-8")
         path.chmod(0o755)
 
-    def go(self, version: str) -> None:
+    def go(self, version: str, warning: str = "") -> None:
         """A go whose own version is `version`: `go env` prints what the script asks
-        for, GOVERSION GOENV GOROOT CC, and anything else fails, so the check runs no
-        other go command."""
+        for, GOVERSION GOENV GOROOT CC, after `warning` on standard error as the
+        real one may. Anything else fails, so the check runs no other go command,
+        and so does a run outside / or without GOTOOLCHAIN=local, where the real one
+        would read go.mod and could switch toolchains, which needs the network."""
+        warn = f'echo "{warning}" >&2\n' if warning else ""
         self.stub(
             "go",
+            'if [ "$GOTOOLCHAIN" != local ] || [ "$(pwd)" != / ]; then\n'
+            '  echo "go run in $(pwd) with GOTOOLCHAIN=$GOTOOLCHAIN" >&2; exit 2\nfi\n'
+            f"{warn}"
             'case "$*" in\n'
             f'"env GOVERSION GOENV GOROOT CC") printf "%s\\n" {version} {self.goenv} {self.goroot} gcc ;;\n'
             '*) echo "unexpected: go $*" >&2; exit 2 ;;\nesac',
@@ -150,6 +156,29 @@ class Prereqs(unittest.TestCase):
         self.assertIn(f"go1.26.10-X:nodwarf5 is older than {WANT}", line)
         self.assertIn(f"GOTOOLCHAIN=local (set in {self.goroot}/go.env)", line)
         self.assertIn("`go env -w GOTOOLCHAIN=auto`", line)
+
+    def test_an_empty_gotoolchain_counts_as_unset(self):
+        # As for the go command: go.env's local applies, not an empty value.
+        self.go("go1.26.9")
+        (self.goroot / "go.env").write_text("GOTOOLCHAIN=local\n", encoding="utf-8")
+        [line] = self.errors(self.run_make("prereqs", GOTOOLCHAIN=""))
+        self.assertIn(f"GOTOOLCHAIN=local (set in {self.goroot}/go.env)", line)
+
+    def test_a_warning_from_go_doesnt_shift_its_answers(self):
+        # The real go warns on standard error when GOPATH is GOROOT, say.
+        warning = "warning: both GOPATH and GOROOT are the same directory"
+        self.go("go1.26.9", warning=warning)
+        (self.goroot / "go.env").write_text("GOTOOLCHAIN=local\n", encoding="utf-8")
+        [line] = self.errors(self.run_make("prereqs"))
+        self.assertIn(f"GOTOOLCHAIN=local (set in {self.goroot}/go.env)", line)
+        self.go(WANT, warning=warning)
+        done = self.run_make("prereqs")
+        self.assertEqual(done.returncode, 0, done.stderr)
+
+    def test_a_go_env_that_fails_says_why(self):
+        self.stub("go", 'echo "go: cannot find GOROOT directory" >&2; exit 1')
+        [line] = self.errors(self.run_make("prereqs"))
+        self.assertIn("go: `go env` failed (go: cannot find GOROOT directory);", line)
 
     def test_go_env_w_wins_over_the_go_installation(self):
         self.go("go1.26.9")
