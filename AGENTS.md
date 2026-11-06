@@ -26,7 +26,8 @@ and `Part of those-who-run/paddock#N` otherwise, as paddock's `AGENTS.md` says.
   detector (a skipped test fails, and so does total coverage below the floor,
   `COVERAGE_FLOOR` in the [`Makefile`](Makefile)), go build and govulncheck;
 - the repository's own checks (with the Go tests, CI's `test`): every internal
-  Markdown link and anchor resolves, the guard and settings in `.claude/` are
+  Markdown link and anchor resolves, the copies in `.claude/` (the guard, the
+  settings, and the skills and agents a `.github` release lists) are
   `those-who-run/.github`'s `agent/` at the commit CI pins, and the tests in
   `tests/`.
 
@@ -104,3 +105,30 @@ A new clone or worktree runs `make prereqs`, then `make hooks`, first.
 them is made in `those-who-run/.github`, then copied here unchanged with the
 bump of the `checks.yml` pin in `.github/workflows/ci.yml`.
 `.claude/guard.json` holds this repository's own values.
+
+## The skills and the agents
+
+The skills and agents' briefs that `those-who-run/.github` shares are copies
+too: `.claude/skills/twr-*/` and `.claude/agents/twr-*.md` are its
+`agent/skills/` and `agent/agents/`, changed there and never here. Its
+`agent/copies.json` lists every copy, source path to destination path, the
+guard and the settings among them, and is read at the commit
+`.github/workflows/ci.yml` pins for `checks.yml`; a release from before that
+file copies the guard and the settings alone. The copies move with the pin, in
+the same PR.
+
+`make guard` ([`scripts/guard_copy.py`](scripts/guard_copy.py)) fails when:
+
+- a listed file is missing here, or differs by a byte from the one at the
+  pinned commit: copy it unchanged from there;
+- git tracks a file at `.claude/skills/twr-*/**` or `.claude/agents/twr-*.md`
+  that the manifest doesn't list, or any such file when the pinned commit has
+  no manifest: it is left over from another release, so delete it;
+- the manifest can't be read, sends a file outside `.claude/`, names a path
+  with `..` in it, or leaves out the guard: that is fixed in
+  `those-who-run/.github`, and nothing is compared until it is.
+
+A skill or agent of this repository's own takes a name that doesn't start with
+`twr-`. `.gitignore` keeps `.claude/skills/` and `.claude/agents/` tracked and
+the rest of `.claude/` out, which
+[`tests/test_gitignore.py`](tests/test_gitignore.py) holds.
