@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.1.0](https://github.com/those-who-run/chassis/compare/v1.0.5...v1.1.0) (2026-11-07)
+
+
+### Features
+
+* the copy check follows .github's manifest of skills and agents ([#34](https://github.com/those-who-run/chassis/issues/34)) ([502aa52](https://github.com/those-who-run/chassis/commit/502aa525dc7d0eba8b84855157a64b18b8d321d6))
+
 ## [1.0.5](https://github.com/those-who-run/chassis/compare/v1.0.4...v1.0.5) (2026-10-29)
 
 
