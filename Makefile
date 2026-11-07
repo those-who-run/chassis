@@ -30,7 +30,7 @@ help:
 	@echo "hooks     - install the commit hooks; a new clone or worktree runs it once"
 	@echo "fmt-check, tidy, vet, go-test, build, vuln - the Go checks one at a time"
 	@echo "links     - every internal link and anchor in the Markdown resolves (offline)"
-	@echo "guard     - .claude/ holds those-who-run/.github's guard and settings at the pinned commit"
+	@echo "guard     - .claude/ holds those-who-run/.github's guard, settings, skills and agents at the pinned commit, and no stale one"
 
 # go.yml's order: gofmt, tidy, vet, golangci-lint, the tests, build, govulncheck.
 .PHONY: check

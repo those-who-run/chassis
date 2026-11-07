@@ -44,7 +44,9 @@ acceptance criterion, `Part of those-who-run/paddock#N` otherwise
 - OpenSSF Scorecard, weekly ([`scorecard.yml`](.github/workflows/scorecard.yml)).
   It gates nothing.
 - The foundation every v2 repository has: [`AGENTS.md`](AGENTS.md),
-  [`CLAUDE.md`](CLAUDE.md), `.github/CODEOWNERS`, the guard in `.claude/`, the
+  [`CLAUDE.md`](CLAUDE.md), `.github/CODEOWNERS`, the guard in `.claude/`, with
+  the skills and agents `those-who-run/.github` shares once the release it
+  pins lists them ([`AGENTS.md`](AGENTS.md#the-skills-and-the-agents)), the
   commit hooks, `renovate.json` and the licence.
 
 ## Conventions
@@ -155,6 +157,16 @@ questions and what stays out of a new repository.
   bump among them, reaches the template with nothing to copy by hand.
   `README.md.jinja` is a README of its own; `cmd/[[name]]/` renders as
   `cmd/<name>/`.
+- What `those-who-run/.github` copies into `.claude/` (the guard, the settings,
+  and the skills and agents' briefs under `.claude/skills/` and
+  `.claude/agents/`) is always a plain file at the path it has in any
+  repository, never a `.jinja` template: copier copies a file without the
+  suffix byte for byte, so `[[ ]]`, `[% %]`, `{{ }}` or the name `chassis` in a
+  `SKILL.md` reach a new repository as they are, and its copy check, which
+  compares bytes, passes. The release fan-out in `those-who-run/.github` writes
+  them here as it does anywhere else.
+  [`tests/test_template.py`](tests/test_template.py) holds both: a copy is
+  never rendered, and nothing under `.claude/` is a template.
 - [`docs/dependencies.md`](docs/dependencies.md) is copied as it is, with
   chassis's empty table, and from then on holds the repository's own rows.
   `copier update` merges the template's later changes into it three ways, as it

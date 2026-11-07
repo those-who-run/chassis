@@ -1,11 +1,15 @@
 __pycache__/
 # make's output: the coverage profile, the test log, the template check's copier.
 /build/
-# Claude Code: only the shared settings, the guard and its config are tracked;
-# the rest, among it the worktrees in .claude/worktrees/, stays out.
+# Claude Code: only the shared settings, the guard and its config, the skills and
+# the agents are tracked; the rest, among it the worktrees in .claude/worktrees/,
+# stays out. Each exception names a child of .claude/ itself: git can't bring back
+# a file whose directory is still left out. tests/test_gitignore.py holds it.
 .claude/*
 !.claude/settings.json
 !.claude/guard.json
 !.claude/hooks/
 .claude/hooks/*
 !.claude/hooks/guard.py
+!.claude/skills/
+!.claude/agents/

@@ -74,6 +74,9 @@ HEADER_WITHOUT_IMAGE = (
     "Merging this releases it: release-please tags the merge commit and creates the "
     "GitHub release."
 )
+# What those-who-run/.github copies into .claude/ beside the guard: the same bytes
+# in every repository (scripts/guard_copy.py), so the name can't be changed in them.
+SHARED_COPIES = (".claude/skills/twr-", ".claude/agents/twr-")
 CHASSIS_ONLY_CONDITION = (
     "    # chassis is the template, not a component: it never publishes an image.\n"
     "    if: github.repository != 'those-who-run/chassis'\n"
@@ -95,6 +98,13 @@ def copier() -> Path:
         )
         stamp.write_text(want)
     return VENV / "bin" / "copier"
+
+
+def copy_of_chassis(dst: Path) -> None:
+    """chassis's files in dst, a plain directory: a template a test can add to."""
+    for f in chassis_files():
+        (dst / f).parent.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(ROOT / f, dst / f)
 
 
 def chassis_files() -> set[str]:
@@ -187,7 +197,11 @@ class Rendered(unittest.TestCase):
                 self.assertEqual(self.rendered(path).replace(NAME, "chassis"), want)
 
     def test_only_the_readme_and_the_answers_name_chassis(self):
-        naming = {f for f in files(self.dst) if "chassis" in self.rendered(f)}
+        # A shared skill or brief that names chassis names it in every repository.
+        naming = {
+            f for f in files(self.dst)
+            if not f.startswith(SHARED_COPIES) and "chassis" in self.rendered(f)
+        }
         self.assertEqual(naming, {README, ANSWERS})
 
     def test_every_template_renders_in_place_of_chassiss_own_file(self):
@@ -284,9 +298,7 @@ class ChassisReleaseHistoryStaysInChassis(unittest.TestCase):
         cls._tmp = tempfile.TemporaryDirectory()
         tmp = Path(cls._tmp.name)
         cls.src = tmp / "chassis"
-        for f in chassis_files():
-            (cls.src / f).parent.mkdir(parents=True, exist_ok=True)
-            shutil.copy2(ROOT / f, cls.src / f)
+        copy_of_chassis(cls.src)
         (cls.src / MANIFEST).write_text(f'{{".": "{cls.CHASSIS_VERSION}"}}\n', encoding="utf-8")
         (cls.src / "CHANGELOG.md").write_text(
             "# Changelog\n\n"
@@ -334,6 +346,55 @@ class ChassisReleaseHistoryStaysInChassis(unittest.TestCase):
         copier_copy(self.src, dst, False, "--overwrite")
         self.assertEqual((dst / MANIFEST).read_text(encoding="utf-8"), released)
         self.assertTrue((dst / "go.mod").is_file())
+
+
+class CopiesInDotClaudeAreNeverRendered(unittest.TestCase):
+    """What those-who-run/.github copies into .claude/ (the guard, the settings, the
+    skills and the agents' briefs) is checked byte for byte in every repository
+    (scripts/guard_copy.py), so a new repository must get chassis's copies as they
+    are. A plain file is copied, not rendered: a scratch copy of chassis with a
+    skill and a brief full of what copier, Jinja and GitHub Actions would each read
+    gives a repository with the same bytes, chassis's name included."""
+
+    COPIES = {
+        ".claude/skills/twr-example/SKILL.md": (
+            b"---\nname: twr-example\ndescription: What a copy must survive.\n---\n\n"
+            b"copier's own: [[ name ]], [[ undefined_here ]], [% if image %]an image[% endif %], "
+            b"[% endfor %], [# a comment #].\n"
+            b"Jinja's: {{ name }}, {% raw %}, {# a comment #}.\n"
+            b"GitHub Actions': ${{ github.ref }}.\n"
+            b"chassis is the template, and stays chassis here.\r\n"
+            b"No newline at the end"
+        ),
+        ".claude/agents/twr-example.md": b"---\nname: twr-example\n---\n\n[% include 'README.md' %]\n",
+    }
+
+    @classmethod
+    def setUpClass(cls):
+        cls._tmp = tempfile.TemporaryDirectory()
+        cls.addClassCleanup(cls._tmp.cleanup)
+        src = Path(cls._tmp.name) / "chassis"
+        copy_of_chassis(src)
+        for path, content in cls.COPIES.items():
+            (src / path).parent.mkdir(parents=True, exist_ok=True)
+            (src / path).write_bytes(content)
+        cls.dst = Path(cls._tmp.name) / NAME
+        copier_copy(src, cls.dst, True)
+
+    def test_a_skill_and_a_brief_arrive_byte_for_byte(self):
+        for path, content in self.COPIES.items():
+            with self.subTest(path=path):
+                self.assertEqual((self.dst / path).read_bytes(), content)
+
+    def test_so_do_the_guard_and_the_settings(self):
+        for path in (".claude/hooks/guard.py", ".claude/settings.json"):
+            with self.subTest(path=path):
+                self.assertEqual((self.dst / path).read_bytes(), (ROOT / path).read_bytes())
+
+    def test_no_copy_in_chassis_is_a_template(self):
+        # A `.jinja` sibling under .claude/ would be rendered in the copy's place.
+        templates = sorted(f for f in chassis_files() if f.startswith(".claude/") and f.endswith(".jinja"))
+        self.assertEqual(templates, [])
 
 
 if __name__ == "__main__":
