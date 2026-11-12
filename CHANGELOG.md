@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.1.1](https://github.com/those-who-run/chassis/compare/v1.1.0...v1.1.1) (2026-11-12)
+
+
+### Dependencies
+
+* Go 1.27.4 ([#40](https://github.com/those-who-run/chassis/issues/40)) ([90c76cc](https://github.com/those-who-run/chassis/commit/90c76cc57444a97b295ea4427e6a067ab6078a6a))
+
 ## [1.1.0](https://github.com/those-who-run/chassis/compare/v1.0.5...v1.1.0) (2026-11-07)
 
 
